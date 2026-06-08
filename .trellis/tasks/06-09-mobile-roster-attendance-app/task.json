@@ -1,0 +1,28 @@
+{
+  "id": "mobile-roster-attendance-app",
+  "name": "mobile-roster-attendance-app",
+  "title": "Mobile roster attendance app",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "xmbhjQAQ",
+  "assignee": "xmbhjQAQ",
+  "createdAt": "2026-06-09",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "06-09-qroster-v0-usability-refinements"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}
