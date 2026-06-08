@@ -173,63 +173,223 @@ class _HomeDrawer extends StatelessWidget {
   }
 }
 
-class _RosterCard extends StatelessWidget {
+class _RosterCard extends StatefulWidget {
   const _RosterCard({required this.roster});
 
   final Roster roster;
 
   @override
+  State<_RosterCard> createState() => _RosterCardState();
+}
+
+class _RosterCardState extends State<_RosterCard> {
+  static const _actionWidth = 144.0;
+
+  double _dragOffset = 0;
+
+  @override
   Widget build(BuildContext context) {
     final controller = context.watch<QrosterController>();
+    final roster = widget.roster;
     final entryCount = controller.entriesFor(roster.id).length;
-    return SectionCard(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => RosterDetailScreen(rosterId: roster.id),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.fact_check_rounded),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      roster.name,
-                      style: Theme.of(context).textTheme.titleMedium,
+    final sessionCount = controller.sessionCountFor(roster.id);
+    final offset = _dragOffset.clamp(0.0, _actionWidth);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Row(
+              children: [
+                SizedBox(
+                  width: _actionWidth / 2,
+                  child: Material(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: InkWell(
+                      onTap: () => _pinRoster(context),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.vertical_align_top_rounded),
+                          SizedBox(height: 4),
+                          Text('置顶'),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${roster.type.label} · $entryCount 人 · ${controller.latestRecordLabel(roster.id)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                SizedBox(
+                  width: _actionWidth / 2,
+                  child: Material(
+                    color: Theme.of(context).colorScheme.error,
+                    child: InkWell(
+                      onTap: () => _confirmDelete(context),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.delete_rounded,
+                            color: Theme.of(context).colorScheme.onError,
                           ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '删除',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onHorizontalDragUpdate: (details) {
+              setState(() {
+                _dragOffset = (_dragOffset + details.delta.dx).clamp(
+                  0.0,
+                  _actionWidth,
+                );
+              });
+            },
+            onHorizontalDragEnd: (_) {
+              setState(() {
+                _dragOffset = _dragOffset > _actionWidth / 2 ? _actionWidth : 0;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              transform: Matrix4.translationValues(offset, 0, 0),
+              child: SectionCard(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () {
+                    if (_dragOffset > 0) {
+                      setState(() => _dragOffset = 0);
+                      return;
+                    }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RosterDetailScreen(rosterId: roster.id),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.fact_check_rounded),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                roster.name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _metadataLabel(
+                                  controller: controller,
+                                  roster: roster,
+                                  entryCount: entryCount,
+                                  sessionCount: sessionCount,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+
+  String _metadataLabel({
+    required QrosterController controller,
+    required Roster roster,
+    required int entryCount,
+    required int sessionCount,
+  }) {
+    final parts = [
+      roster.type.label,
+      '$entryCount 人',
+      if (roster.type == RosterType.longTerm) '已记录 $sessionCount 次',
+      controller.latestRecordLabel(roster.id),
+    ];
+    return parts.join(' · ');
+  }
+
+  Future<void> _pinRoster(BuildContext context) async {
+    await context.read<QrosterController>().pinRoster(widget.roster.id);
+    if (!mounted || !context.mounted) return;
+    setState(() => _dragOffset = 0);
+    showSnack(context, '已置顶：${widget.roster.name}');
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除花名册'),
+        content: Text('确定删除“${widget.roster.name}”吗？相关成员、记录和结果都会删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    await context.read<QrosterController>().deleteRoster(widget.roster.id);
+    if (!mounted) return;
+    setState(() => _dragOffset = 0);
+    if (context.mounted) {
+      showSnack(context, '已删除：${widget.roster.name}');
+    }
   }
 }

@@ -31,6 +31,7 @@ This is a child task of `06-09-mobile-roster-attendance-app` and should preserve
 - Result status filtering:
   - The result page should support quick filtering by status.
   - Users can tap a status such as "没到" to show only entries with that status.
+  - When a status filter is active, the result page shows a separate count label using the exact wording `数量: {amount}`.
   - Users can return to the full result list without leaving the page.
   - This is a lightweight filter, not an analytics/reporting feature.
 
@@ -46,6 +47,7 @@ This is a child task of `06-09-mobile-roster-attendance-app` and should preserve
 - [ ] Long-term roster cards show a lightweight usage-count label such as `已记录 X 次`.
 - [ ] `.xlsx` import can feed spreadsheet-derived text into LLM parsing when LLM is configured.
 - [ ] On the result page, tapping a status filter such as "没到" shows only entries with that status.
+- [ ] When viewing a filtered status result, the page shows `数量: {amount}` for the currently visible filtered entries.
 - [ ] The result page can return to showing all entries.
 - [ ] `flutter analyze`, `flutter test`, and `flutter build apk --debug` pass after implementation.
 

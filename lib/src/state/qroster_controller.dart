@@ -81,12 +81,20 @@ class QrosterController extends ChangeNotifier {
     return DateFormat('yyyy-MM-dd HH:mm').format(sessions.first.createdAt);
   }
 
+  int sessionCountFor(String rosterId) {
+    return _data.sessions.where((session) => session.rosterId == rosterId).length;
+  }
+
   List<ParsedRosterEntry> parseText(String text) {
     return _importService.parsePlainText(text);
   }
 
   List<ParsedRosterEntry> parseSpreadsheet(Uint8List bytes) {
     return _importService.parseSpreadsheetBytes(bytes);
+  }
+
+  String spreadsheetTextForLlm(Uint8List bytes) {
+    return _importService.spreadsheetBytesToText(bytes);
   }
 
   Future<List<ParsedRosterEntry>> parseWithLlm(String sourceText) {
@@ -165,8 +173,40 @@ class QrosterController extends ChangeNotifier {
     await _persist();
   }
 
-  Future<RosterSession> createSession(Roster roster) async {
-    final now = DateTime.now();
+  Future<void> pinRoster(String rosterId) async {
+    final index = _data.rosters.indexWhere((roster) => roster.id == rosterId);
+    if (index <= 0) {
+      return;
+    }
+    final nextRosters = [..._data.rosters];
+    final roster = nextRosters.removeAt(index);
+    nextRosters.insert(0, roster.copyWith(updatedAt: DateTime.now()));
+    _data = _data.copyWith(rosters: nextRosters);
+    await _persist();
+  }
+
+  Future<void> deleteRoster(String rosterId) async {
+    final sessionIds = _data.sessions
+        .where((session) => session.rosterId == rosterId)
+        .map((session) => session.id)
+        .toSet();
+    _data = _data.copyWith(
+      rosters: _data.rosters.where((roster) => roster.id != rosterId).toList(),
+      entries: _data.entries.where((entry) => entry.rosterId != rosterId).toList(),
+      sessions:
+          _data.sessions.where((session) => session.rosterId != rosterId).toList(),
+      results: _data.results
+          .where((result) => !sessionIds.contains(result.sessionId))
+          .toList(),
+    );
+    await _persist();
+  }
+
+  Future<RosterSession> createSession(
+    Roster roster, {
+    DateTime? recordedAt,
+  }) async {
+    final now = recordedAt ?? DateTime.now();
     final session = RosterSession(
       id: _uuid.v4(),
       rosterId: roster.id,

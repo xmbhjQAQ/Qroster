@@ -89,5 +89,12 @@ the result list:
 
 Selecting a status filters the visible rows to entries with that exact status.
 Entries without a status should appear only under `全部` unless an explicit
-unmarked filter is added later. This task does not add charts or summary
-analytics.
+unmarked filter is added later.
+
+When a status filter is active, show a separate count label near the filters:
+
+```text
+数量: 3
+```
+
+This task does not add charts or summary analytics.

@@ -31,6 +31,7 @@
 6. Add result-page status filters
    - Add `全部` plus one chip per roster status.
    - Filter visible entries by selected status.
+   - When a non-`全部` filter is active, show `数量: {amount}` for visible rows.
    - Keep status editing available on filtered rows.
 
 7. Verify

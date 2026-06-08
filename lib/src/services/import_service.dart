@@ -46,6 +46,26 @@ class ImportService {
     }).where((entry) => entry.isValid).toList();
   }
 
+  String spreadsheetBytesToText(Uint8List bytes) {
+    final workbook = Excel.decodeBytes(bytes);
+    final buffer = StringBuffer();
+    for (final table in workbook.tables.entries) {
+      final sheet = table.value;
+      buffer.writeln('Sheet: ${table.key}');
+      for (var rowIndex = 0; rowIndex < sheet.rows.length; rowIndex += 1) {
+        final cells = sheet.rows[rowIndex]
+            .map((cell) => _cellText(cell?.value).trim())
+            .toList();
+        if (cells.every((cell) => cell.isEmpty)) {
+          continue;
+        }
+        buffer.writeln('Row ${rowIndex + 1}: ${cells.join(' | ')}');
+      }
+      buffer.writeln();
+    }
+    return buffer.toString().trim();
+  }
+
   ParsedRosterEntry _parseLine(String line) {
     final cleaned = line.trim();
     if (cleaned.isEmpty) {

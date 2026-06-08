@@ -133,14 +133,108 @@ class RosterDetailScreen extends StatelessWidget {
   }
 
   Future<void> _startSession(BuildContext context, Roster roster) async {
+    final recordedAt = await _chooseSessionTime(context);
+    if (recordedAt == null || !context.mounted) {
+      return;
+    }
     final controller = context.read<QrosterController>();
-    final session = await controller.createSession(roster);
+    final session = await controller.createSession(
+      roster,
+      recordedAt: recordedAt,
+    );
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => MarkingScreen(
           rosterId: roster.id,
           sessionId: session.id,
+        ),
+      ),
+    );
+  }
+
+  Future<DateTime?> _chooseSessionTime(BuildContext context) {
+    var selected = DateTime.now();
+    return showDialog<DateTime>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('记录时间'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('默认使用当前设备时间。'),
+              const SizedBox(height: 12),
+              Text(
+                '${selected.year}-${_twoDigits(selected.month)}-${_twoDigits(selected.day)} '
+                '${_twoDigits(selected.hour)}:${_twoDigits(selected.minute)}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: selected,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked == null) return;
+                        setDialogState(() {
+                          selected = DateTime(
+                            picked.year,
+                            picked.month,
+                            picked.day,
+                            selected.hour,
+                            selected.minute,
+                          );
+                        });
+                      },
+                      icon: const Icon(Icons.calendar_month_rounded),
+                      label: const Text('日期'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.fromDateTime(selected),
+                        );
+                        if (picked == null) return;
+                        setDialogState(() {
+                          selected = DateTime(
+                            selected.year,
+                            selected.month,
+                            selected.day,
+                            picked.hour,
+                            picked.minute,
+                          );
+                        });
+                      },
+                      icon: const Icon(Icons.schedule_rounded),
+                      label: const Text('时间'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(selected),
+              child: const Text('开始记录'),
+            ),
+          ],
         ),
       ),
     );
@@ -163,3 +257,5 @@ class RosterDetailScreen extends StatelessWidget {
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+
+String _twoDigits(int value) => value.toString().padLeft(2, '0');

@@ -25,6 +25,7 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
   final List<String> _statuses = List<String>.from(defaultStatusOptions);
   final List<ParsedRosterEntry> _previewEntries = [];
   RosterType _type = RosterType.temporary;
+  String _spreadsheetLlmText = '';
   bool _busy = false;
 
   @override
@@ -166,6 +167,14 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
+                if (_spreadsheetLlmText.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '已读取 .xlsx 内容，可点击 LLM 解析重新适配表格格式。',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -193,9 +202,25 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                           subtitle: entry.value.note.isEmpty
                               ? null
                               : Text(entry.value.note),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.edit_rounded),
-                            onPressed: () => _editPreviewEntry(entry.key),
+                          trailing: Wrap(
+                            spacing: 4,
+                            children: [
+                              IconButton(
+                                tooltip: '编辑',
+                                icon: const Icon(Icons.edit_rounded),
+                                onPressed: () => _editPreviewEntry(entry.key),
+                              ),
+                              IconButton(
+                                tooltip: '删除',
+                                icon: Icon(
+                                  Icons.delete_rounded,
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                                onPressed: () => setState(
+                                  () => _previewEntries.removeAt(entry.key),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -237,15 +262,23 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
       return;
     }
     final bytes = await file.readAsBytes();
+    _spreadsheetLlmText = controller.spreadsheetTextForLlm(bytes);
     _replacePreview(controller.parseSpreadsheet(bytes));
   }
 
   Future<void> _parseWithLlm() async {
     setState(() => _busy = true);
     try {
+      final sourceText = _textImportController.text.trim().isNotEmpty
+          ? _textImportController.text
+          : _spreadsheetLlmText;
+      if (sourceText.trim().isEmpty) {
+        showSnack(context, '请先输入文本或导入 .xlsx');
+        return;
+      }
       final entries = await context
           .read<QrosterController>()
-          .parseWithLlm(_textImportController.text);
+          .parseWithLlm(sourceText);
       _replacePreview(entries);
       if (!mounted) return;
       showSnack(context, 'LLM 已生成 ${entries.length} 个条目');
@@ -330,40 +363,57 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
     final entry = _previewEntries[index];
     var displayName = entry.displayName;
     var note = entry.note;
+    var nameError = '';
     final updated = await showDialog<ParsedRosterEntry>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('编辑条目'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              initialValue: displayName,
-              onChanged: (value) => displayName = value,
-              decoration: const InputDecoration(labelText: '显示名'),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('编辑条目'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                initialValue: displayName,
+                onChanged: (value) {
+                  displayName = value;
+                  if (nameError.isNotEmpty && value.trim().isNotEmpty) {
+                    setDialogState(() => nameError = '');
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: '显示名',
+                  errorText: nameError.isEmpty ? null : nameError,
+                ),
+              ),
+              TextFormField(
+                initialValue: note,
+                onChanged: (value) => note = value,
+                decoration: const InputDecoration(labelText: '备注'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('取消'),
             ),
-            TextFormField(
-              initialValue: note,
-              onChanged: (value) => note = value,
-              decoration: const InputDecoration(labelText: '备注'),
+            FilledButton(
+              onPressed: () {
+                if (displayName.trim().isEmpty) {
+                  setDialogState(() => nameError = '显示名不能为空');
+                  return;
+                }
+                Navigator.of(context).pop(
+                  ParsedRosterEntry(
+                    displayName: displayName.trim(),
+                    note: note.trim(),
+                  ),
+                );
+              },
+              child: const Text('保存'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(
-              ParsedRosterEntry(
-                displayName: displayName,
-                note: note,
-              ),
-            ),
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
     if (updated == null || !updated.isValid) {
@@ -373,6 +423,11 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
   }
 
   Future<void> _save() async {
+    final validEntries = _previewEntries.where((entry) => entry.isValid).toList();
+    if (validEntries.isEmpty) {
+      showSnack(context, '请先导入或保留至少一个有效名单条目');
+      return;
+    }
     setState(() => _busy = true);
     try {
       final controller = context.read<QrosterController>();
@@ -380,7 +435,7 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
         name: _nameController.text,
         type: _type,
         statusOptions: _statuses,
-        parsedEntries: _previewEntries,
+        parsedEntries: validEntries,
       );
       if (!mounted) return;
       Navigator.of(context).pop(widget.completeOnboardingOnSave);

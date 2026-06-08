@@ -38,6 +38,9 @@ objects before display or persistence.
   or a URL ending in `/v1`; the service normalizes requests to
   `/chat/completions`. UI fields must show examples so users do not have to
   guess the suffix.
+- `.xlsx` content sent to LLM parsing must first be normalized into readable
+  text rows such as `Sheet: ...` and `Row N: cell | cell`; never pass binary
+  workbook bytes or UI-only table objects to the LLM boundary.
 
 ---
 

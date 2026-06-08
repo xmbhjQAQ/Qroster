@@ -45,3 +45,7 @@ requests for parsing only; their responses must be validated into
 - Do not let UI widgets parse raw LLM JSON or spreadsheet cells.
 - Do not rely on display names as identifiers; stable IDs preserve historical
   results when names are edited.
+- Deleting a roster must cascade only through data scoped to that roster:
+  roster metadata, entries, sessions, and results belonging to those sessions.
+- Pinning a roster is represented by persisted roster list order; do not add a
+  second ordering mechanism unless the storage model changes.
