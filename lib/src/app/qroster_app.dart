@@ -31,18 +31,75 @@ class QrosterApp extends StatelessWidget {
           shape: CircleBorder(),
         ),
       ),
-      home: Consumer<QrosterController>(
-        builder: (context, controller, _) {
-          if (!controller.isLoaded) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return controller.settings.onboardingCompleted
-              ? const HomeScreen()
-              : const OnboardingScreen();
-        },
-      ),
+      home: const _AppEntry(),
     );
+  }
+}
+
+class _AppEntry extends StatefulWidget {
+  const _AppEntry();
+
+  @override
+  State<_AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<_AppEntry> {
+  QrosterController? _controller;
+  bool _isLoaded = false;
+  bool _onboardingCompleted = false;
+  bool _syncScheduled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = context.read<QrosterController>();
+    if (_controller == controller) {
+      return;
+    }
+    _controller?.removeListener(_onControllerChanged);
+    _controller = controller..addListener(_onControllerChanged);
+    _isLoaded = controller.isLoaded;
+    _onboardingCompleted = controller.settings.onboardingCompleted;
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isLoaded) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    return _onboardingCompleted ? const HomeScreen() : const OnboardingScreen();
+  }
+
+  void _onControllerChanged() {
+    final controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    final nextLoaded = controller.isLoaded;
+    final nextOnboardingCompleted = controller.settings.onboardingCompleted;
+    if (nextLoaded == _isLoaded &&
+        nextOnboardingCompleted == _onboardingCompleted) {
+      return;
+    }
+    if (_syncScheduled) {
+      return;
+    }
+    _syncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScheduled = false;
+      if (!mounted || _controller == null) {
+        return;
+      }
+      setState(() {
+        _isLoaded = _controller!.isLoaded;
+        _onboardingCompleted = _controller!.settings.onboardingCompleted;
+      });
+    });
   }
 }
