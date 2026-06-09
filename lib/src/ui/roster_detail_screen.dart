@@ -8,10 +8,7 @@ import 'result_screen.dart';
 import 'widgets/qroster_widgets.dart';
 
 class RosterDetailScreen extends StatelessWidget {
-  const RosterDetailScreen({
-    super.key,
-    required this.rosterId,
-  });
+  const RosterDetailScreen({super.key, required this.rosterId});
 
   final String rosterId;
 
@@ -38,9 +35,9 @@ class RosterDetailScreen extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Chip(label: Text(roster.type.label)),
-                    const SizedBox(width: 8),
                     Chip(label: Text('${entries.length} 人')),
+                    const SizedBox(width: 8),
+                    Chip(label: Text('已记录 ${sessions.length} 次')),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -65,14 +62,13 @@ class RosterDetailScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    if (roster.type == RosterType.longTerm)
-                      IconButton.filledTonal(
-                        tooltip: '导出全部历史',
-                        onPressed: sessions.isEmpty
-                            ? null
-                            : () => _exportHistory(context, roster),
-                        icon: const Icon(Icons.download_rounded),
-                      ),
+                    IconButton.filledTonal(
+                      tooltip: '导出全部历史',
+                      onPressed: sessions.isEmpty
+                          ? null
+                          : () => _exportHistory(context, roster),
+                      icon: const Icon(Icons.download_rounded),
+                    ),
                   ],
                 ),
               ],
@@ -112,8 +108,24 @@ class RosterDetailScreen extends StatelessWidget {
                     (session) => ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(session.title),
-                      subtitle: Text('${controller.resultsFor(session.id).length} 个状态'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      subtitle: Text(
+                        '${controller.resultsFor(session.id).length} 个状态',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: '删除记录',
+                            icon: Icon(
+                              Icons.delete_rounded,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            onPressed: () =>
+                                _confirmDeleteSession(context, session),
+                          ),
+                          const Icon(Icons.chevron_right_rounded),
+                        ],
+                      ),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => ResultScreen(
@@ -145,10 +157,8 @@ class RosterDetailScreen extends StatelessWidget {
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => MarkingScreen(
-          rosterId: roster.id,
-          sessionId: session.id,
-        ),
+        builder: (_) =>
+            MarkingScreen(rosterId: roster.id, sessionId: session.id),
       ),
     );
   }
@@ -242,14 +252,48 @@ class RosterDetailScreen extends StatelessWidget {
 
   Future<void> _exportHistory(BuildContext context, Roster roster) async {
     try {
-      final path = await context.read<QrosterController>().exportLongTermHistory(
-            roster,
-          );
+      final path = await context.read<QrosterController>().exportHistory(
+        roster,
+      );
       if (!context.mounted) return;
       showSnack(context, '已导出：$path');
     } catch (error) {
       if (!context.mounted) return;
       showSnack(context, '导出失败：$error');
+    }
+  }
+
+  Future<void> _confirmDeleteSession(
+    BuildContext context,
+    RosterSession session,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除记录'),
+        content: Text('确定删除“${session.title}”这条记录吗？成员和其他记录不会被删除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    await context.read<QrosterController>().deleteSession(session.id);
+    if (context.mounted) {
+      showSnack(context, '已删除记录：${session.title}');
     }
   }
 }

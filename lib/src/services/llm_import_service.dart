@@ -37,10 +37,7 @@ class LlmImportService {
             'content':
                 '你是花名册导入解析器。只返回 JSON，不要解释。格式为 {"entries":[{"displayName":"姓名","note":"可选备注"}]}。',
           },
-          {
-            'role': 'user',
-            'content': '请把以下内容解析为花名册条目：\n$sourceText',
-          },
+          {'role': 'user', 'content': '请把以下内容解析为花名册条目：\n$sourceText'},
         ],
       }),
     );
@@ -75,8 +72,8 @@ class LlmImportService {
     final entriesJson = decoded is List
         ? decoded
         : decoded is Map<String, dynamic>
-            ? decoded['entries'] as List<dynamic>?
-            : null;
+        ? decoded['entries'] as List<dynamic>?
+        : null;
     if (entriesJson == null) {
       throw const LlmImportException('LLM 返回 JSON 缺少 entries');
     }
@@ -90,9 +87,9 @@ class LlmImportService {
 
   String _stripCodeFence(String content) {
     final trimmed = content.trim();
-    final match = RegExp(r'^```(?:json)?\s*([\s\S]*?)\s*```$').firstMatch(
-      trimmed,
-    );
+    final match = RegExp(
+      r'^```(?:json)?\s*([\s\S]*?)\s*```$',
+    ).firstMatch(trimmed);
     return match?.group(1)?.trim() ?? trimmed;
   }
 }

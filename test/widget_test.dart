@@ -9,6 +9,7 @@ import 'package:qroster/src/models/app_data.dart';
 import 'package:qroster/src/models/app_settings.dart';
 import 'package:qroster/src/models/parsed_roster_entry.dart';
 import 'package:qroster/src/models/roster_models.dart';
+import 'package:qroster/src/services/xlsx_export_service.dart';
 import 'package:qroster/src/state/qroster_controller.dart';
 import 'package:qroster/src/storage/qroster_store.dart';
 import 'package:qroster/src/ui/result_screen.dart';
@@ -50,57 +51,56 @@ void main() {
     expect(find.text('还没有花名册'), findsOneWidget);
   });
 
-  testWidgets('creates first roster from onboarding without route swap errors', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(800, 1100);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+  testWidgets(
+    'creates first roster from onboarding without route swap errors',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1100);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    final controller = QrosterController(store: MemoryQrosterStore());
-    await controller.load();
+      final controller = QrosterController(store: MemoryQrosterStore());
+      await controller.load();
 
-    await tester.pumpWidget(
-      ChangeNotifierProvider.value(
-        value: controller,
-        child: const QrosterApp(),
-      ),
-    );
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: controller,
+          child: const QrosterApp(),
+        ),
+      );
 
-    await tester.ensureVisible(find.text('创建花名册'));
-    await tester.tap(find.text('创建花名册'));
-    await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('创建花名册'));
+      await tester.tap(find.text('创建花名册'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('格式示例'), findsOneWidget);
+      expect(find.text('格式示例'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).at(0), '测试花名册');
-    await tester.enterText(find.byType(TextField).at(1), '张三\n李四，1班');
-    await tester.tap(find.text('按固定格式解析'));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -600));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('保存花名册'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), '测试花名册');
+      await tester.enterText(find.byType(TextField).at(1), '张三\n李四，1班');
+      await tester.tap(find.text('按固定格式解析'));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('保存花名册'));
+      await tester.pumpAndSettle();
 
-    expect(controller.settings.onboardingCompleted, isTrue);
-    expect(find.text('测试花名册'), findsOneWidget);
-  });
+      expect(controller.settings.onboardingCompleted, isTrue);
+      expect(find.text('测试花名册'), findsOneWidget);
+    },
+  );
 
   test('pins and deletes rosters with scoped data cleanup', () async {
     final controller = QrosterController(store: MemoryQrosterStore());
     await controller.load();
     final first = await controller.createRoster(
       name: '第一组',
-      type: RosterType.longTerm,
       statusOptions: defaultStatusOptions,
       parsedEntries: const [ParsedRosterEntry(displayName: '张三')],
     );
     final second = await controller.createRoster(
       name: '第二组',
-      type: RosterType.temporary,
       statusOptions: defaultStatusOptions,
       parsedEntries: const [ParsedRosterEntry(displayName: '李四')],
     );
@@ -121,17 +121,49 @@ void main() {
     expect(controller.resultsFor(firstSession.id), isEmpty);
   });
 
+  test(
+    'deletes one history session without deleting members or other sessions',
+    () async {
+      final controller = QrosterController(store: MemoryQrosterStore());
+      await controller.load();
+      final roster = await controller.createRoster(
+        name: '考勤',
+        statusOptions: defaultStatusOptions,
+        parsedEntries: const [ParsedRosterEntry(displayName: '张三')],
+      );
+      final entry = controller.entriesFor(roster.id).first;
+      final firstSession = await controller.createSession(roster);
+      final secondSession = await controller.createSession(roster);
+      await controller.setResult(
+        sessionId: firstSession.id,
+        entryId: entry.id,
+        statusLabel: '到了',
+      );
+      await controller.setResult(
+        sessionId: secondSession.id,
+        entryId: entry.id,
+        statusLabel: '没到',
+      );
+
+      await controller.deleteSession(firstSession.id);
+
+      expect(
+        controller.entriesFor(roster.id).map((entry) => entry.displayName),
+        ['张三'],
+      );
+      expect(controller.sessionsFor(roster.id).map((session) => session.id), [
+        secondSession.id,
+      ]);
+      expect(controller.resultsFor(firstSession.id), isEmpty);
+      expect(controller.resultsFor(secondSession.id), hasLength(1));
+    },
+  );
+
   test('converts xlsx rows to readable text for LLM parsing', () async {
     final excel = Excel.createExcel();
     final sheet = excel['Sheet1'];
-    sheet.appendRow([
-      TextCellValue('姓名'),
-      TextCellValue('班级'),
-    ]);
-    sheet.appendRow([
-      TextCellValue('张三'),
-      TextCellValue('1班'),
-    ]);
+    sheet.appendRow([TextCellValue('姓名'), TextCellValue('班级')]);
+    sheet.appendRow([TextCellValue('张三'), TextCellValue('1班')]);
     final controller = QrosterController(store: MemoryQrosterStore());
     final text = controller.spreadsheetTextForLlm(
       Uint8List.fromList(excel.encode()!),
@@ -142,6 +174,86 @@ void main() {
     expect(text, contains('Row 2: 张三 | 1班'));
   });
 
+  test(
+    'builds editable xlsx exports with meaningful sheets and columns',
+    () async {
+      final controller = QrosterController(store: MemoryQrosterStore());
+      await controller.load();
+      final roster = await controller.createRoster(
+        name: '考勤',
+        statusOptions: defaultStatusOptions,
+        parsedEntries: const [
+          ParsedRosterEntry(displayName: '张三', note: '1班'),
+          ParsedRosterEntry(displayName: '李四'),
+        ],
+      );
+      final session = await controller.createSession(
+        roster,
+        recordedAt: DateTime(2026, 6, 9, 8, 30),
+      );
+      final entries = controller.entriesFor(roster.id);
+      await controller.setResult(
+        sessionId: session.id,
+        entryId: entries[0].id,
+        statusLabel: '到了',
+      );
+      await controller.setResult(
+        sessionId: session.id,
+        entryId: entries[1].id,
+        statusLabel: '没到',
+      );
+      final service = XlsxExportService();
+
+      final single = Excel.decodeBytes(
+        service.buildSingleSessionWorkbook(
+          roster: roster,
+          session: session,
+          entries: entries,
+          results: controller.resultsFor(session.id),
+        ),
+      );
+      expect(single.tables.keys, containsAll(['记录', '统计']));
+      final singleHeader = _findRow(single['记录'].rows, [
+        '序号',
+        '姓名',
+        '备注',
+        '状态',
+        '记录时间',
+      ]);
+      expect(singleHeader, isNotNull);
+      expect(_rowText(single['记录'].rows[singleHeader! + 1]), [
+        '1',
+        '张三',
+        '1班',
+        '到了',
+        '2026-06-09 08:30',
+      ]);
+
+      final history = Excel.decodeBytes(
+        service.buildLongTermHistoryWorkbook(
+          roster: roster,
+          entries: entries,
+          sessions: [session],
+          results: controller.resultsFor(session.id),
+        ),
+      );
+      expect(history.tables.keys, containsAll(['全部记录', '统计']));
+      final historyHeader = _findRow(history['全部记录'].rows, [
+        '序号',
+        '姓名',
+        '备注',
+        '2026-06-09 08:30',
+      ]);
+      expect(historyHeader, isNotNull);
+      expect(_rowText(history['全部记录'].rows[historyHeader! + 1]), [
+        '1',
+        '张三',
+        '1班',
+        '到了',
+      ]);
+    },
+  );
+
   testWidgets('filters result page by status and shows filtered count', (
     tester,
   ) async {
@@ -149,7 +261,6 @@ void main() {
     await controller.load();
     final roster = await controller.createRoster(
       name: '考勤',
-      type: RosterType.longTerm,
       statusOptions: defaultStatusOptions,
       parsedEntries: const [
         ParsedRosterEntry(displayName: '张三'),
@@ -173,10 +284,7 @@ void main() {
       ChangeNotifierProvider.value(
         value: controller,
         child: MaterialApp(
-          home: ResultScreen(
-            rosterId: roster.id,
-            sessionId: session.id,
-          ),
+          home: ResultScreen(rosterId: roster.id, sessionId: session.id),
         ),
       ),
     );
@@ -194,4 +302,17 @@ void main() {
     expect(find.text('张三'), findsOneWidget);
     expect(find.text('李四'), findsOneWidget);
   });
+}
+
+List<String> _rowText(List<Data?> row) {
+  return row.map((cell) => cell?.value.toString() ?? '').toList();
+}
+
+int? _findRow(List<List<Data?>> rows, List<String> expected) {
+  for (final row in rows.indexed) {
+    if (_rowText(row.$2).join('\u0000') == expected.join('\u0000')) {
+      return row.$1;
+    }
+  }
+  return null;
 }

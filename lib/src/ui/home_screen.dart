@@ -68,9 +68,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         )
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                          itemBuilder: (context, index) => _RosterCard(
-                            roster: rosters[index],
-                          ),
+                          itemBuilder: (context, index) =>
+                              _RosterCard(roster: rosters[index]),
                           separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
                           itemCount: rosters.length,
@@ -110,9 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openRosterEditor(BuildContext context) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const RosterEditorScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const RosterEditorScreen()));
   }
 }
 
@@ -161,9 +160,9 @@ class _HomeDrawer extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.tune_rounded),
-                title: const Text('长期配置'),
+                title: const Text('默认配置'),
                 subtitle: const Text('后续放全局默认项'),
-                onTap: () => showSnack(context, '长期配置将在后续版本扩展'),
+                onTap: () => showSnack(context, '默认配置将在后续版本扩展'),
               ),
             ],
           ),
@@ -205,7 +204,9 @@ class _RosterCardState extends State<_RosterCard> {
                 SizedBox(
                   width: _actionWidth / 2,
                   child: Material(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
                     child: InkWell(
                       onTap: () => _pinRoster(context),
                       child: const Column(
@@ -288,8 +289,9 @@ class _RosterCardState extends State<_RosterCard> {
                           width: 48,
                           height: 48,
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.fact_check_rounded),
@@ -313,13 +315,11 @@ class _RosterCardState extends State<_RosterCard> {
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                               ),
                             ],
@@ -345,9 +345,8 @@ class _RosterCardState extends State<_RosterCard> {
     required int sessionCount,
   }) {
     final parts = [
-      roster.type.label,
       '$entryCount 人',
-      if (roster.type == RosterType.longTerm) '已记录 $sessionCount 次',
+      '已记录 $sessionCount 次',
       controller.latestRecordLabel(roster.id),
     ];
     return parts.join(' · ');

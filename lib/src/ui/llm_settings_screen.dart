@@ -80,10 +80,7 @@ class _LlmSettingsScreenState extends State<LlmSettingsScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton(
-            onPressed: _save,
-            child: const Text('保存配置'),
-          ),
+          FilledButton(onPressed: _save, child: const Text('保存配置')),
         ],
       ),
     );

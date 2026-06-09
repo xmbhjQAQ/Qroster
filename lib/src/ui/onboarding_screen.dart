@@ -44,10 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
-                TextButton(
-                  onPressed: _skip,
-                  child: const Text('跳过'),
-                ),
+                TextButton(onPressed: _skip, child: const Text('跳过')),
               ],
             ),
             const SizedBox(height: 20),
@@ -55,8 +52,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('1. LLM 导入解析',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    '1. LLM 导入解析',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
                   const Text('开启后可解析较乱的文本或表格；关闭后使用固定格式导入。'),
                   const SizedBox(height: 12),
@@ -83,7 +82,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     enabled: _llmEnabled,
                     decoration: const InputDecoration(
                       labelText: 'Base URL',
-                      hintText: 'https://api.openai.com 或 https://api.openai.com/v1',
+                      hintText:
+                          'https://api.openai.com 或 https://api.openai.com/v1',
                       helperText: '填到域名或 /v1 都可以，程序会自动请求 /chat/completions。',
                       border: OutlineInputBorder(),
                     ),
@@ -120,10 +120,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('2. 创建第一个花名册',
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    '2. 创建第一个花名册',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 8),
-                  const Text('设置名称、长期性、状态选项，然后导入名单。'),
+                  const Text('设置名称、状态选项，然后导入名单。'),
                   const SizedBox(height: 12),
                   FilledButton.icon(
                     onPressed: _createFirstRoster,
@@ -158,9 +160,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!mounted) return;
     final created = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => const RosterEditorScreen(
-          completeOnboardingOnSave: true,
-        ),
+        builder: (_) =>
+            const RosterEditorScreen(completeOnboardingOnSave: true),
       ),
     );
     if (!mounted || created != true) return;
@@ -169,7 +170,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _skip() async {
     await context.read<QrosterController>().updateSettings(
-          const AppSettings(onboardingCompleted: true),
-        );
+      const AppSettings(onboardingCompleted: true),
+    );
   }
 }

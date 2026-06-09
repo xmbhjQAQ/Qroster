@@ -35,6 +35,8 @@ Compatibility rule:
 
 - Roster detail keeps session history and export actions available for every
   roster.
+- Roster detail history rows expose a delete affordance. Deleting a history row
+  asks for confirmation and removes only that session and its results.
 
 ## XLSX Export Format
 
@@ -80,6 +82,21 @@ Rows:
    - one column per session title/time
 
 No old `类型` row should be exported.
+
+## XLSX Save Flow
+
+Current Android behavior can save files into app-private storage under
+`/Android/data/...`, which is hard for users to find. Export should prefer a
+user-visible save or share flow.
+
+Preferred behavior:
+
+- use a platform save picker when available
+- otherwise open a system share/save handoff for the `.xlsx`
+- after export, show a message that reflects what happened
+
+The implementation should avoid promising a specific absolute path unless the
+platform returns one.
 
 ### Optional Summary
 

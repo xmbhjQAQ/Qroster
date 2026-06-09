@@ -32,18 +32,22 @@ class ImportService {
     final hasHeader = _looksLikeHeader(header);
     final dataRows = hasHeader ? rows.skip(1) : rows;
 
-    return dataRows.map((row) {
-      final displayName =
-          nameColumn < row.length ? row[nameColumn].trim() : '';
-      final note = row
-          .asMap()
-          .entries
-          .where((entry) => entry.key != nameColumn)
-          .map((entry) => entry.value.trim())
-          .where((value) => value.isNotEmpty)
-          .join(' / ');
-      return ParsedRosterEntry(displayName: displayName, note: note);
-    }).where((entry) => entry.isValid).toList();
+    return dataRows
+        .map((row) {
+          final displayName = nameColumn < row.length
+              ? row[nameColumn].trim()
+              : '';
+          final note = row
+              .asMap()
+              .entries
+              .where((entry) => entry.key != nameColumn)
+              .map((entry) => entry.value.trim())
+              .where((value) => value.isNotEmpty)
+              .join(' / ');
+          return ParsedRosterEntry(displayName: displayName, note: note);
+        })
+        .where((entry) => entry.isValid)
+        .toList();
   }
 
   String spreadsheetBytesToText(Uint8List bytes) {

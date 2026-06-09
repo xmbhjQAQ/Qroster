@@ -15,9 +15,6 @@ Future<void> main() async {
   await controller.load();
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: controller,
-      child: const QrosterApp(),
-    ),
+    ChangeNotifierProvider.value(value: controller, child: const QrosterApp()),
   );
 }

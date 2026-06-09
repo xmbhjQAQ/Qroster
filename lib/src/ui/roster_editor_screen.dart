@@ -8,10 +8,7 @@ import '../state/qroster_controller.dart';
 import 'widgets/qroster_widgets.dart';
 
 class RosterEditorScreen extends StatefulWidget {
-  const RosterEditorScreen({
-    super.key,
-    this.completeOnboardingOnSave = false,
-  });
+  const RosterEditorScreen({super.key, this.completeOnboardingOnSave = false});
 
   final bool completeOnboardingOnSave;
 
@@ -24,7 +21,6 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
   final _textImportController = TextEditingController();
   final List<String> _statuses = List<String>.from(defaultStatusOptions);
   final List<ParsedRosterEntry> _previewEntries = [];
-  RosterType _type = RosterType.temporary;
   String _spreadsheetLlmText = '';
   bool _busy = false;
 
@@ -53,22 +49,6 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                     labelText: '花名册名称',
                     border: OutlineInputBorder(),
                   ),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<RosterType>(
-                  segments: const [
-                    ButtonSegment(
-                      value: RosterType.temporary,
-                      label: Text('临时'),
-                    ),
-                    ButtonSegment(
-                      value: RosterType.longTerm,
-                      label: Text('长期'),
-                    ),
-                  ],
-                  selected: {_type},
-                  onSelectionChanged: (values) =>
-                      setState(() => _type = values.first),
                 ),
               ],
             ),
@@ -108,8 +88,10 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
               children: [
                 Row(
                   children: [
-                    Text('导入名单',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '导入名单',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const Spacer(),
                     TextButton.icon(
                       onPressed: _showImportHelp,
@@ -119,7 +101,7 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                         minimumSize: const Size(0, 40),
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                       ),
-                    )
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -150,8 +132,9 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                       label: const Text('导入 .xlsx'),
                     ),
                     FilledButton.tonalIcon(
-                      onPressed:
-                          settings.hasLlmConfig && !_busy ? _parseWithLlm : null,
+                      onPressed: settings.hasLlmConfig && !_busy
+                          ? _parseWithLlm
+                          : null,
                       icon: const Icon(Icons.auto_awesome_rounded),
                       label: const Text('LLM 解析'),
                     ),
@@ -185,8 +168,10 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
               children: [
                 Row(
                   children: [
-                    Text('导入预览',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '导入预览',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const Spacer(),
                     Text('${_previewEntries.length} 项'),
                   ],
@@ -196,34 +181,34 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
                   const Text('解析后会在这里确认和修改。')
                 else
                   ..._previewEntries.asMap().entries.map(
-                        (entry) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(entry.value.displayName),
-                          subtitle: entry.value.note.isEmpty
-                              ? null
-                              : Text(entry.value.note),
-                          trailing: Wrap(
-                            spacing: 4,
-                            children: [
-                              IconButton(
-                                tooltip: '编辑',
-                                icon: const Icon(Icons.edit_rounded),
-                                onPressed: () => _editPreviewEntry(entry.key),
-                              ),
-                              IconButton(
-                                tooltip: '删除',
-                                icon: Icon(
-                                  Icons.delete_rounded,
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                                onPressed: () => setState(
-                                  () => _previewEntries.removeAt(entry.key),
-                                ),
-                              ),
-                            ],
+                    (entry) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(entry.value.displayName),
+                      subtitle: entry.value.note.isEmpty
+                          ? null
+                          : Text(entry.value.note),
+                      trailing: Wrap(
+                        spacing: 4,
+                        children: [
+                          IconButton(
+                            tooltip: '编辑',
+                            icon: const Icon(Icons.edit_rounded),
+                            onPressed: () => _editPreviewEntry(entry.key),
                           ),
-                        ),
+                          IconButton(
+                            tooltip: '删除',
+                            icon: Icon(
+                              Icons.delete_rounded,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                            onPressed: () => setState(
+                              () => _previewEntries.removeAt(entry.key),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -238,9 +223,9 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
   }
 
   void _parseText() {
-    final entries = context
-        .read<QrosterController>()
-        .parseText(_textImportController.text);
+    final entries = context.read<QrosterController>().parseText(
+      _textImportController.text,
+    );
     setState(() {
       _previewEntries
         ..clear()
@@ -276,9 +261,9 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
         showSnack(context, '请先输入文本或导入 .xlsx');
         return;
       }
-      final entries = await context
-          .read<QrosterController>()
-          .parseWithLlm(sourceText);
+      final entries = await context.read<QrosterController>().parseWithLlm(
+        sourceText,
+      );
       _replacePreview(entries);
       if (!mounted) return;
       showSnack(context, 'LLM 已生成 ${entries.length} 个条目');
@@ -423,7 +408,9 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
   }
 
   Future<void> _save() async {
-    final validEntries = _previewEntries.where((entry) => entry.isValid).toList();
+    final validEntries = _previewEntries
+        .where((entry) => entry.isValid)
+        .toList();
     if (validEntries.isEmpty) {
       showSnack(context, '请先导入或保留至少一个有效名单条目');
       return;
@@ -433,7 +420,6 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
       final controller = context.read<QrosterController>();
       await controller.createRoster(
         name: _nameController.text,
-        type: _type,
         statusOptions: _statuses,
         parsedEntries: validEntries,
       );

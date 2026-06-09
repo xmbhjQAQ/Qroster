@@ -21,6 +21,10 @@ Current product direction: every roster should be one unified roster type. A ros
   - Exported tables should include enough context to identify roster name, session time, and export time.
   - Exported tables should avoid unnecessary "type" metadata because roster type is being removed.
   - Prefer table-friendly columns that users can filter/sort in Excel/WPS.
+- `.xlsx` save location:
+  - Export should not silently save only into the app-private `/Android/data/...` directory.
+  - Users should be able to choose a save location or hand the file to another app through the system share/save flow.
+  - The export flow should make the saved path or handoff result clear to the user.
 - Proposed single-session columns:
   - `序号`
   - `姓名`
@@ -34,6 +38,11 @@ Current product direction: every roster should be one unified roster type. A ros
   - one column per session, labeled by session time/title
 - Optional lightweight summary:
   - Add a small status-count summary sheet or section only if it stays simple and does not become analytics/charts.
+- Record history management:
+  - Roster detail history entries can be deleted.
+  - Deleting a history entry requires confirmation.
+  - Deleting a history entry removes only that session and its results.
+  - Deleting a history entry must not delete roster members or other sessions.
 
 ## Acceptance Criteria
 
@@ -44,6 +53,9 @@ Current product direction: every roster should be one unified roster type. A ros
 - [ ] Single-session `.xlsx` export uses a meaningful sheet name and table columns: `序号`, `姓名`, `备注`, `状态`, `记录时间`.
 - [ ] All-history `.xlsx` export uses a meaningful sheet name and removes old type metadata.
 - [ ] Exported `.xlsx` files remain editable in Excel/WPS.
+- [ ] Exporting `.xlsx` lets the user choose a location or use the system share/save target instead of only app-private storage.
+- [ ] A user can delete a record history entry from roster detail.
+- [ ] Deleting a record history entry confirms first and removes only that session plus its results.
 - [ ] `flutter analyze`, `flutter test`, and `flutter build apk --debug` pass after implementation.
 
 ## Out of Scope

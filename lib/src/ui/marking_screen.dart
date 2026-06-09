@@ -64,9 +64,9 @@ class _MarkingScreenState extends State<MarkingScreen> {
               Text(
                 entry.displayName,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700),
               ),
               if (entry.note.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -74,8 +74,8 @@ class _MarkingScreenState extends State<MarkingScreen> {
                   entry.note,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
               const Spacer(),

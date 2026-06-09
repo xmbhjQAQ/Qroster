@@ -17,9 +17,9 @@ class QrosterController extends ChangeNotifier {
     ImportService? importService,
     LlmImportService? llmImportService,
     XlsxExportService? xlsxExportService,
-  })  : _importService = importService ?? ImportService(),
-        _llmImportService = llmImportService ?? LlmImportService(),
-        _xlsxExportService = xlsxExportService ?? XlsxExportService();
+  }) : _importService = importService ?? ImportService(),
+       _llmImportService = llmImportService ?? LlmImportService(),
+       _xlsxExportService = xlsxExportService ?? XlsxExportService();
 
   final QrosterStore store;
   final ImportService _importService;
@@ -41,9 +41,7 @@ class QrosterController extends ChangeNotifier {
   }
 
   Future<void> completeOnboarding({required bool completed}) {
-    return updateSettings(
-      settings.copyWith(onboardingCompleted: completed),
-    );
+    return updateSettings(settings.copyWith(onboardingCompleted: completed));
   }
 
   Future<void> updateSettings(AppSettings settings) async {
@@ -52,18 +50,16 @@ class QrosterController extends ChangeNotifier {
   }
 
   List<RosterEntry> entriesFor(String rosterId) {
-    final entries = _data.entries
-        .where((entry) => entry.rosterId == rosterId)
-        .toList()
-      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final entries =
+        _data.entries.where((entry) => entry.rosterId == rosterId).toList()
+          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
     return entries;
   }
 
   List<RosterSession> sessionsFor(String rosterId) {
-    final sessions = _data.sessions
-        .where((session) => session.rosterId == rosterId)
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    final sessions =
+        _data.sessions.where((session) => session.rosterId == rosterId).toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return sessions;
   }
 
@@ -82,7 +78,9 @@ class QrosterController extends ChangeNotifier {
   }
 
   int sessionCountFor(String rosterId) {
-    return _data.sessions.where((session) => session.rosterId == rosterId).length;
+    return _data.sessions
+        .where((session) => session.rosterId == rosterId)
+        .length;
   }
 
   List<ParsedRosterEntry> parseText(String text) {
@@ -106,7 +104,7 @@ class QrosterController extends ChangeNotifier {
 
   Future<Roster> createRoster({
     required String name,
-    required RosterType type,
+    RosterType type = RosterType.longTerm,
     required List<String> statusOptions,
     required List<ParsedRosterEntry> parsedEntries,
   }) async {
@@ -152,8 +150,9 @@ class QrosterController extends ChangeNotifier {
     final updated = roster.copyWith(
       name: name,
       type: type,
-      statusOptions:
-          statusOptions == null ? null : _normalizeStatuses(statusOptions),
+      statusOptions: statusOptions == null
+          ? null
+          : _normalizeStatuses(statusOptions),
       updatedAt: DateTime.now(),
     );
     _data = _data.copyWith(
@@ -192,11 +191,26 @@ class QrosterController extends ChangeNotifier {
         .toSet();
     _data = _data.copyWith(
       rosters: _data.rosters.where((roster) => roster.id != rosterId).toList(),
-      entries: _data.entries.where((entry) => entry.rosterId != rosterId).toList(),
-      sessions:
-          _data.sessions.where((session) => session.rosterId != rosterId).toList(),
+      entries: _data.entries
+          .where((entry) => entry.rosterId != rosterId)
+          .toList(),
+      sessions: _data.sessions
+          .where((session) => session.rosterId != rosterId)
+          .toList(),
       results: _data.results
           .where((result) => !sessionIds.contains(result.sessionId))
+          .toList(),
+    );
+    await _persist();
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    _data = _data.copyWith(
+      sessions: _data.sessions
+          .where((session) => session.id != sessionId)
+          .toList(),
+      results: _data.results
+          .where((result) => result.sessionId != sessionId)
           .toList(),
     );
     await _persist();
@@ -248,10 +262,7 @@ class QrosterController extends ChangeNotifier {
     await _persist();
   }
 
-  String statusFor({
-    required String sessionId,
-    required String entryId,
-  }) {
+  String statusFor({required String sessionId, required String entryId}) {
     return _data.results
             .where(
               (result) =>
@@ -280,7 +291,7 @@ class QrosterController extends ChangeNotifier {
     );
   }
 
-  Future<String> exportLongTermHistory(Roster roster) {
+  Future<String> exportHistory(Roster roster) {
     final sessions = sessionsFor(roster.id).reversed.toList();
     final sessionIds = sessions.map((session) => session.id).toSet();
     final results = _data.results

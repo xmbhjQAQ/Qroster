@@ -3,9 +3,9 @@ enum RosterType {
   longTerm;
 
   String get label => switch (this) {
-        RosterType.temporary => '临时',
-        RosterType.longTerm => '长期',
-      };
+    RosterType.temporary => '临时',
+    RosterType.longTerm => '长期',
+  };
 
   static RosterType fromName(String? name) {
     return RosterType.values.firstWhere(
@@ -51,27 +51,30 @@ class Roster {
   }
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'name': name,
-        'type': type.name,
-        'statusOptions': statusOptions,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'type': type.name,
+    'statusOptions': statusOptions,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   static Roster fromJson(Map<String, Object?> json) {
     return Roster(
       id: json['id'] as String,
       name: json['name'] as String? ?? '未命名花名册',
       type: RosterType.fromName(json['type'] as String?),
-      statusOptions: (json['statusOptions'] as List<dynamic>?)
+      statusOptions:
+          (json['statusOptions'] as List<dynamic>?)
               ?.whereType<String>()
               .where((status) => status.trim().isNotEmpty)
               .toList() ??
           List<String>.from(defaultStatusOptions),
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
     );
   }
@@ -92,11 +95,7 @@ class RosterEntry {
   final String note;
   final int sortOrder;
 
-  RosterEntry copyWith({
-    String? displayName,
-    String? note,
-    int? sortOrder,
-  }) {
+  RosterEntry copyWith({String? displayName, String? note, int? sortOrder}) {
     return RosterEntry(
       id: id,
       rosterId: rosterId,
@@ -107,12 +106,12 @@ class RosterEntry {
   }
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'rosterId': rosterId,
-        'displayName': displayName,
-        'note': note,
-        'sortOrder': sortOrder,
-      };
+    'id': id,
+    'rosterId': rosterId,
+    'displayName': displayName,
+    'note': note,
+    'sortOrder': sortOrder,
+  };
 
   static RosterEntry fromJson(Map<String, Object?> json) {
     return RosterEntry(
@@ -141,21 +140,23 @@ class RosterSession {
   final DateTime updatedAt;
 
   Map<String, Object?> toJson() => {
-        'id': id,
-        'rosterId': rosterId,
-        'title': title,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'id': id,
+    'rosterId': rosterId,
+    'title': title,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   static RosterSession fromJson(Map<String, Object?> json) {
     return RosterSession(
       id: json['id'] as String,
       rosterId: json['rosterId'] as String,
       title: json['title'] as String? ?? '未命名记录',
-      createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
           DateTime.now(),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
     );
   }
@@ -174,10 +175,7 @@ class SessionResult {
   final String statusLabel;
   final DateTime updatedAt;
 
-  SessionResult copyWith({
-    String? statusLabel,
-    DateTime? updatedAt,
-  }) {
+  SessionResult copyWith({String? statusLabel, DateTime? updatedAt}) {
     return SessionResult(
       sessionId: sessionId,
       entryId: entryId,
@@ -187,18 +185,19 @@ class SessionResult {
   }
 
   Map<String, Object?> toJson() => {
-        'sessionId': sessionId,
-        'entryId': entryId,
-        'statusLabel': statusLabel,
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    'sessionId': sessionId,
+    'entryId': entryId,
+    'statusLabel': statusLabel,
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 
   static SessionResult fromJson(Map<String, Object?> json) {
     return SessionResult(
       sessionId: json['sessionId'] as String,
       entryId: json['entryId'] as String,
       statusLabel: json['statusLabel'] as String? ?? '',
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
     );
   }

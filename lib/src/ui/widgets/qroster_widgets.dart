@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 class QAssetIcon extends StatelessWidget {
-  const QAssetIcon(
-    this.assetName, {
-    super.key,
-    this.size = 28,
-  });
+  const QAssetIcon(this.assetName, {super.key, this.size = 28});
 
   final String assetName;
   final double size;
@@ -34,20 +30,13 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: padding,
-        child: child,
-      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    required this.title,
-    required this.message,
-  });
+  const EmptyState({super.key, required this.title, required this.message});
 
   final String title;
   final String message;
@@ -71,8 +60,8 @@ class EmptyState extends StatelessWidget {
             Text(
               message,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -83,7 +72,5 @@ class EmptyState extends StatelessWidget {
 }
 
 void showSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }

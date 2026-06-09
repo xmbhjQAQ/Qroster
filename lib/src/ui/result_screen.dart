@@ -39,15 +39,15 @@ class _ResultScreenState extends State<ResultScreen> {
     final visibleEntries = _selectedStatus == null
         ? entries
         : entries
-            .where(
-              (entry) =>
-                  controller.statusFor(
-                    sessionId: session.id,
-                    entryId: entry.id,
-                  ) ==
-                  _selectedStatus,
-            )
-            .toList();
+              .where(
+                (entry) =>
+                    controller.statusFor(
+                      sessionId: session.id,
+                      entryId: entry.id,
+                    ) ==
+                    _selectedStatus,
+              )
+              .toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -136,10 +136,10 @@ class _ResultScreenState extends State<ResultScreen> {
                         onChanged: (status) {
                           if (status == null) return;
                           context.read<QrosterController>().setResult(
-                                sessionId: session.id,
-                                entryId: entry.id,
-                                statusLabel: status,
-                              );
+                            sessionId: session.id,
+                            entryId: entry.id,
+                            statusLabel: status,
+                          );
                         },
                       ),
                     ],
@@ -162,9 +162,9 @@ class _ResultScreenState extends State<ResultScreen> {
   ) async {
     try {
       final path = await context.read<QrosterController>().exportSingleSession(
-            roster: roster,
-            session: session,
-          );
+        roster: roster,
+        session: session,
+      );
       if (!context.mounted) return;
       showSnack(context, '已导出：$path');
     } catch (error) {

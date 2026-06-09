@@ -27,8 +27,7 @@ class AppSettings {
     String? llmModel,
   }) {
     return AppSettings(
-      onboardingCompleted:
-          onboardingCompleted ?? this.onboardingCompleted,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       llmEnabled: llmEnabled ?? this.llmEnabled,
       llmBaseUrl: llmBaseUrl ?? this.llmBaseUrl,
       llmApiKey: llmApiKey ?? this.llmApiKey,
@@ -37,12 +36,12 @@ class AppSettings {
   }
 
   Map<String, Object?> toJson() => {
-        'onboardingCompleted': onboardingCompleted,
-        'llmEnabled': llmEnabled,
-        'llmBaseUrl': llmBaseUrl,
-        'llmApiKey': llmApiKey,
-        'llmModel': llmModel,
-      };
+    'onboardingCompleted': onboardingCompleted,
+    'llmEnabled': llmEnabled,
+    'llmBaseUrl': llmBaseUrl,
+    'llmApiKey': llmApiKey,
+    'llmModel': llmModel,
+  };
 
   static AppSettings fromJson(Map<String, Object?> json) {
     return AppSettings(
