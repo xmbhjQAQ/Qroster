@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'widgets/qroster_widgets.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
 
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
   static const _appName = 'Q名册';
   static const _englishName = 'qroster';
-  static const _version = '1.0.0';
-  static const _buildNumber = '1';
   static const _repositoryUrl = 'https://github.com/xmbhjQAQ/Qroster';
+
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
   @override
   Widget build(BuildContext context) {
@@ -21,37 +27,15 @@ class AboutScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
             SectionCard(
-              child: Row(
-                children: [
-                  const QAssetIcon('app_mark', size: 64),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _appName,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _englishName,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '版本 $_version ($_buildNumber)',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              child: FutureBuilder<PackageInfo>(
+                future: _packageInfo,
+                builder: (context, snapshot) => _IdentityHeader(
+                  versionLabel: switch (snapshot) {
+                    AsyncSnapshot(:final data?) => _versionLabel(data),
+                    AsyncSnapshot(hasError: true) => '版本信息不可用',
+                    _ => '正在读取版本信息',
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -118,15 +102,7 @@ class AboutScreen extends StatelessWidget {
                     leading: const Icon(Icons.article_rounded),
                     title: const Text('第三方许可证'),
                     trailing: const Icon(Icons.chevron_right_rounded),
-                    onTap: () => showLicensePage(
-                      context: context,
-                      applicationName: _appName,
-                      applicationVersion: '$_version ($_buildNumber)',
-                      applicationIcon: const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: QAssetIcon('app_mark', size: 48),
-                      ),
-                    ),
+                    onTap: () => _showLicenses(context),
                   ),
                 ],
               ),
@@ -137,12 +113,83 @@ class AboutScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showLicenses(BuildContext context) async {
+    PackageInfo? packageInfo;
+    try {
+      packageInfo = await _packageInfo;
+    } on Object {
+      packageInfo = null;
+    }
+    if (!context.mounted) {
+      return;
+    }
+    showLicensePage(
+      context: context,
+      applicationName: _appName,
+      applicationVersion: packageInfo == null
+          ? null
+          : _versionText(packageInfo),
+      applicationIcon: const Padding(
+        padding: EdgeInsets.all(12),
+        child: QAssetIcon('app_mark', size: 48),
+      ),
+    );
+  }
+
   static Future<void> _copyRepositoryUrl(BuildContext context) async {
     await Clipboard.setData(const ClipboardData(text: _repositoryUrl));
     if (!context.mounted) {
       return;
     }
     showSnack(context, '已复制 GitHub 仓库链接');
+  }
+
+  static String _versionLabel(PackageInfo packageInfo) {
+    return '版本 ${_versionText(packageInfo)}';
+  }
+
+  static String _versionText(PackageInfo packageInfo) {
+    final buildNumber = packageInfo.buildNumber.trim();
+    if (buildNumber.isEmpty) {
+      return packageInfo.version;
+    }
+    return '${packageInfo.version} ($buildNumber)';
+  }
+}
+
+class _IdentityHeader extends StatelessWidget {
+  const _IdentityHeader({required this.versionLabel});
+
+  final String versionLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const QAssetIcon('app_mark', size: 64),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _AboutScreenState._appName,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _AboutScreenState._englishName,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(versionLabel, style: Theme.of(context).textTheme.bodyMedium),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 

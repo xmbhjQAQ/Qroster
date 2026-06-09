@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:excel/excel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:qroster/src/app/qroster_app.dart';
 import 'package:qroster/src/models/app_data.dart';
@@ -17,6 +18,16 @@ import 'package:qroster/src/ui/result_screen.dart';
 import 'package:qroster/src/ui/roster_detail_screen.dart';
 
 void main() {
+  setUp(() {
+    PackageInfo.setMockInitialValues(
+      appName: 'Q名册',
+      packageName: 'qroster',
+      version: '9.8.7',
+      buildNumber: '654',
+      buildSignature: '',
+    );
+  });
+
   testWidgets('shows onboarding on first launch', (tester) async {
     final controller = QrosterController(store: MemoryQrosterStore());
     await controller.load();
@@ -77,7 +88,7 @@ void main() {
 
     expect(find.widgetWithText(AppBar, '关于 Q名册'), findsOneWidget);
     expect(find.text('qroster'), findsOneWidget);
-    expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
+    expect(find.text('版本 9.8.7 (654)'), findsOneWidget);
     expect(find.text('第三方许可证'), findsOneWidget);
   });
 
