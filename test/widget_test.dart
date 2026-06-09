@@ -53,6 +53,34 @@ void main() {
     expect(find.text('还没有花名册'), findsOneWidget);
   });
 
+  testWidgets('opens about page from bottom drawer entry', (tester) async {
+    final controller = QrosterController(
+      store: MemoryQrosterStore(
+        AppData.empty().copyWith(
+          settings: const AppSettings(onboardingCompleted: true),
+        ),
+      ),
+    );
+    await controller.load();
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: controller,
+        child: const QrosterApp(),
+      ),
+    );
+
+    await tester.tap(find.byTooltip('菜单'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('关于 Q名册'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(AppBar, '关于 Q名册'), findsOneWidget);
+    expect(find.text('qroster'), findsOneWidget);
+    expect(find.text('版本 1.0.0 (1)'), findsOneWidget);
+    expect(find.text('第三方许可证'), findsOneWidget);
+  });
+
   testWidgets(
     'creates first roster from onboarding without route swap errors',
     (tester) async {

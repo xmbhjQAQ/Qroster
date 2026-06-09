@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/roster_models.dart';
 import '../state/qroster_controller.dart';
+import 'about_screen.dart';
 import 'llm_settings_screen.dart';
 import 'roster_detail_screen.dart';
 import 'roster_editor_screen.dart';
@@ -145,26 +146,46 @@ class _HomeDrawer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.auto_awesome_rounded),
+                      title: const Text('LLM 配置'),
+                      subtitle: const Text('OpenAI-compatible'),
+                      onTap: () async {
+                        onClose();
+                        await waitForUiSettle();
+                        if (!context.mounted) return;
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const LlmSettingsScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.tune_rounded),
+                      title: const Text('默认配置'),
+                      subtitle: const Text('后续放全局默认项'),
+                      onTap: () => showSnack(context, '默认配置将在后续版本扩展'),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.auto_awesome_rounded),
-                title: const Text('LLM 配置'),
-                subtitle: const Text('OpenAI-compatible'),
+                leading: const Icon(Icons.info_outline_rounded),
+                title: const Text('关于 Q名册'),
                 onTap: () async {
                   onClose();
                   await waitForUiSettle();
                   if (!context.mounted) return;
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const LlmSettingsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const AboutScreen()),
                   );
                 },
-              ),
-              ListTile(
-                leading: const Icon(Icons.tune_rounded),
-                title: const Text('默认配置'),
-                subtitle: const Text('后续放全局默认项'),
-                onTap: () => showSnack(context, '默认配置将在后续版本扩展'),
               ),
             ],
           ),
