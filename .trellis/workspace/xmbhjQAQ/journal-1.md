@@ -71,3 +71,36 @@ Removed user-facing temporary/long-term roster choice, made history available to
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Prevent missed marking and rename sessions
+
+**Date**: 2026-06-09
+**Task**: Prevent missed marking and rename sessions
+**Branch**: `master`
+
+### Summary
+
+Implemented derived 未记录 state across marking/result/export, added skip and incomplete-finish confirmations, added jump-to-unrecorded action, enabled session custom title and rename, updated history summaries, and verified analyze/test/debug APK.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d16eb88` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
