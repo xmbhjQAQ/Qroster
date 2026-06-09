@@ -334,60 +334,83 @@ class RosterDetailScreen extends StatelessWidget {
     BuildContext context,
     RosterSession session,
   ) async {
-    final titleController = TextEditingController(text: session.title);
-    var titleError = '';
-    try {
-      final title = await showDialog<String>(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: const Text('重命名记录'),
-            content: TextField(
-              controller: titleController,
-              autofocus: true,
-              onChanged: (value) {
-                if (titleError.isNotEmpty && value.trim().isNotEmpty) {
-                  setDialogState(() => titleError = '');
-                }
-              },
-              decoration: InputDecoration(
-                labelText: '记录名称',
-                errorText: titleError.isEmpty ? null : titleError,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final trimmed = titleController.text.trim();
-                  if (trimmed.isEmpty) {
-                    setDialogState(() => titleError = '记录名称不能为空');
-                    return;
-                  }
-                  Navigator.of(context).pop(trimmed);
-                },
-                child: const Text('保存'),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (title == null || !context.mounted) {
-        return;
-      }
-      await context.read<QrosterController>().renameSession(
-        sessionId: session.id,
-        title: title,
-      );
-      if (context.mounted) {
-        showSnack(context, '已重命名记录');
-      }
-    } finally {
-      titleController.dispose();
+    final title = await showDialog<String>(
+      context: context,
+      builder: (_) => _RenameSessionDialog(initialTitle: session.title),
+    );
+    if (title == null || !context.mounted) {
+      return;
     }
+    await context.read<QrosterController>().renameSession(
+      sessionId: session.id,
+      title: title,
+    );
+    if (context.mounted) {
+      showSnack(context, '已重命名记录');
+    }
+  }
+}
+
+class _RenameSessionDialog extends StatefulWidget {
+  const _RenameSessionDialog({required this.initialTitle});
+
+  final String initialTitle;
+
+  @override
+  State<_RenameSessionDialog> createState() => _RenameSessionDialogState();
+}
+
+class _RenameSessionDialogState extends State<_RenameSessionDialog> {
+  late final TextEditingController _titleController;
+  String _titleError = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initialTitle);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('重命名记录'),
+      content: TextField(
+        controller: _titleController,
+        autofocus: true,
+        onChanged: (value) {
+          if (_titleError.isNotEmpty && value.trim().isNotEmpty) {
+            setState(() => _titleError = '');
+          }
+        },
+        decoration: InputDecoration(
+          labelText: '记录名称',
+          errorText: _titleError.isEmpty ? null : _titleError,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final trimmed = _titleController.text.trim();
+            if (trimmed.isEmpty) {
+              setState(() => _titleError = '记录名称不能为空');
+              return;
+            }
+            Navigator.of(context).pop(trimmed);
+          },
+          child: const Text('保存'),
+        ),
+      ],
+    );
   }
 }
 

@@ -14,6 +14,7 @@ import 'package:qroster/src/state/qroster_controller.dart';
 import 'package:qroster/src/storage/qroster_store.dart';
 import 'package:qroster/src/ui/marking_screen.dart';
 import 'package:qroster/src/ui/result_screen.dart';
+import 'package:qroster/src/ui/roster_detail_screen.dart';
 
 void main() {
   testWidgets('shows onboarding on first launch', (tester) async {
@@ -183,6 +184,36 @@ void main() {
     expect(renamed.title, '第一次训练');
     expect(renamed.createdAt, createdAt);
     expect(renamed.updatedAt.isAfter(createdAt), isTrue);
+  });
+
+  testWidgets('cancels session rename dialog without route teardown errors', (
+    tester,
+  ) async {
+    final controller = QrosterController(store: MemoryQrosterStore());
+    await controller.load();
+    final roster = await controller.createRoster(
+      name: '考勤',
+      statusOptions: defaultStatusOptions,
+      parsedEntries: const [ParsedRosterEntry(displayName: '张三')],
+    );
+    await controller.createSession(roster, title: '周二早读');
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: controller,
+        child: MaterialApp(home: RosterDetailScreen(rosterId: roster.id)),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.edit_rounded));
+    await tester.pumpAndSettle();
+    expect(find.text('重命名记录'), findsOneWidget);
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('周二早读'), findsOneWidget);
   });
 
   test('converts xlsx rows to readable text for LLM parsing', () async {
