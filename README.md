@@ -152,6 +152,25 @@ flutter test --no-pub
 flutter build apk --debug --no-pub
 ```
 
+## 自动构建
+
+仓库使用 GitHub Actions 做基础 CI 和发布构建。
+
+| 触发方式 | 行为 |
+| --- | --- |
+| push 到 `master` | 运行 `flutter analyze`、`flutter test`，构建 debug APK 并上传 artifact |
+| 向 `main` 发起 Pull Request | 运行 `flutter analyze`、`flutter test`，构建 debug APK 并上传 artifact |
+| push `v*` tag，例如 `v1.0.1` | 运行检查，构建 release APK，上传 artifact，并创建 GitHub Release |
+
+版本策略：
+
+- 合并到 `main` 不自动修改 `pubspec.yaml` 版本号
+- 发布版本由 tag 控制，例如 `v1.0.1`
+- tag 构建时使用 tag 去掉 `v` 后的内容作为 `build-name`
+- tag 构建时使用 GitHub Actions run number 作为 `build-number`
+
+正式上架前，需要把 Android release signing 从当前临时配置切换到正式 keystore，并通过 GitHub Secrets 管理签名信息。
+
 ## 项目结构
 
 ```text
