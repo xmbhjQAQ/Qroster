@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "06-09-qroster-v0-usability-refinements",
-    "06-09-simplify-roster-model-improve-xlsx-export"
+    "06-09-simplify-roster-model-improve-xlsx-export",
+    "06-09-prevent-missed-marking-rename-sessions"
   ],
   "parent": null,
   "relatedFiles": [],
