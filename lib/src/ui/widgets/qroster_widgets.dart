@@ -74,3 +74,7 @@ class EmptyState extends StatelessWidget {
 void showSnack(BuildContext context, String message) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
+
+Future<void> waitForUiSettle() async {
+  await WidgetsBinding.instance.endOfFrame;
+}

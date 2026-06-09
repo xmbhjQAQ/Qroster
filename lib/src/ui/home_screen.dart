@@ -149,8 +149,10 @@ class _HomeDrawer extends StatelessWidget {
                 leading: const Icon(Icons.auto_awesome_rounded),
                 title: const Text('LLM 配置'),
                 subtitle: const Text('OpenAI-compatible'),
-                onTap: () {
+                onTap: () async {
                   onClose();
+                  await waitForUiSettle();
+                  if (!context.mounted) return;
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => const LlmSettingsScreen(),

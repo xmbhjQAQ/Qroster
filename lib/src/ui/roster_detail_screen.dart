@@ -168,6 +168,7 @@ class RosterDetailScreen extends StatelessWidget {
       recordedAt: draft.recordedAt,
       title: draft.title,
     );
+    await waitForUiSettle();
     if (!context.mounted) return;
     await Navigator.of(context).push(
       MaterialPageRoute(

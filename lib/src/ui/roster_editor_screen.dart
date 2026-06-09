@@ -423,6 +423,7 @@ class _RosterEditorScreenState extends State<RosterEditorScreen> {
         statusOptions: _statuses,
         parsedEntries: validEntries,
       );
+      await waitForUiSettle();
       if (!mounted) return;
       Navigator.of(context).pop(widget.completeOnboardingOnSave);
     } finally {

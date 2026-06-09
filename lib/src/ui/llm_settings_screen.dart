@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../models/app_settings.dart';
 import '../state/qroster_controller.dart';
+import 'widgets/qroster_widgets.dart';
 
 class LlmSettingsScreen extends StatefulWidget {
   const LlmSettingsScreen({super.key});
@@ -97,6 +98,7 @@ class _LlmSettingsScreenState extends State<LlmSettingsScreen> {
         llmModel: _modelController.text.trim(),
       ),
     );
+    await waitForUiSettle();
     if (!mounted) return;
     Navigator.of(context).pop();
   }

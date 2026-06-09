@@ -165,6 +165,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
     if (!mounted || created != true) return;
+    await waitForUiSettle();
+    if (!mounted) return;
     await context.read<QrosterController>().completeOnboarding(completed: true);
   }
 
