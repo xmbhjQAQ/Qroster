@@ -1,17 +1,219 @@
-# qroster
+# Q名册
 
-A new Flutter project.
+> 一个离线优先的移动端花名册记录工具，用来替代纸质表格里的点名、签到、确认、领取和状态统计。
 
-## Getting Started
+Q名册，英文名 `qroster`，是一个基于 Flutter 的跨平台小工具。它面向的不是单一的“课堂点名”场景，而是更泛用的“对一份名单逐个记录状态”的需求：到了或没到、签到或缺席、领取或未领取、完成或未完成，都可以通过自定义状态来表达。
 
-This project is a starting point for a Flutter application.
+项目目标很简单：让用户在手机上完成名单导入、逐人记录、结果筛选、历史管理和 `.xlsx` 导出，减少纸质表格统计和手工整理的重复劳动。
 
-A few resources to get you started if this is your first Flutter project:
+## 项目特点
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+| 能力 | 说明 |
+| --- | --- |
+| 离线优先 | 数据保存在本地，不依赖云端服务 |
+| 跨平台 | 使用 Flutter 开发，适合后续扩展 Android、iOS、桌面端 |
+| 自定义状态 | 状态不固定为“到了/没到”，用户可以按场景自定义 |
+| 多花名册隔离 | 每个花名册独立维护名单、记录历史和导出结果 |
+| 防漏记录 | 点到过程中会提示未记录成员，支持跳转补录 |
+| 记录历史 | 每次记录都是独立 session，支持查看、删除、重命名 |
+| `.xlsx` 导入导出 | 名单导入和结果导出围绕 `.xlsx` 格式，不扩展无关格式 |
+| LLM 辅助解析 | 可配置 OpenAI-compatible 接口，用于适配不规则文本或表格 |
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 适用场景
+
+- 课堂点名、社团签到、训练到场记录
+- 会议参会确认、活动签到、志愿者集合
+- 物资领取、任务完成状态、临时名单核对
+- 任何“逐个成员记录一个状态，并最终统计结果”的场景
+
+## 功能概览
+
+### 花名册管理
+
+- 首页展示所有花名册
+- 每个花名册独立保存名单、状态选项、记录历史
+- 支持右滑花名册进行置顶和删除
+- 花名册内可查看成员、状态选项和历史记录
+
+### 名单导入
+
+支持两种导入方式：
+
+1. 固定格式导入
+   - 纯文本一行一个人
+   - 可用逗号、中文逗号、分号、竖线或 Tab 分隔备注
+   - `.xlsx` 会优先识别“姓名 / 名字 / name”列，其他非空列合并到备注
+
+2. LLM 辅助解析
+   - 支持 OpenAI-compatible 接口
+   - 可处理更混乱的文本或表格内容
+   - LLM 可在首次使用引导中开启或关闭
+   - 关闭 LLM 后仍可使用固定格式导入
+
+### 点到与记录
+
+- 手机上逐个显示成员姓名
+- 用户点击自定义状态完成记录
+- 当前成员未选择状态时，继续前进会显示为“跳过”并弹出确认
+- 记录过程中显示 `已记录 X · 未记录 Y`
+- 支持直接跳转到下一个未记录成员
+- 结束时如果还有未记录成员，会提示返回补录或查看结果
+
+### 结果统计
+
+- 结果页支持按状态筛选
+- 支持单独查看 `未记录` 成员
+- 筛选后显示 `数量: {amount}`
+- 可以在结果页直接补改成员状态
+- 可以编辑成员名称和备注
+
+### 记录历史
+
+- 每次记录都会形成一条历史记录
+- 历史记录显示已记录数量、未记录数量和记录时间
+- 支持重命名记录，例如“周二早读”“第一次训练签到”
+- 支持删除单条记录，删除前会确认
+- 删除记录只删除该次 session 和结果，不会删除成员名单
+
+### `.xlsx` 导出
+
+导出使用系统分享/保存面板，避免文件只落在 Android app 私有目录中。
+
+单次记录导出包含：
+
+| 序号 | 姓名 | 备注 | 状态 | 记录时间 |
+| --- | --- | --- | --- | --- |
+
+全部历史导出包含：
+
+| 序号 | 姓名 | 备注 | 记录 1 | 记录 2 |
+| --- | --- | --- | --- | --- |
+
+导出文件还包含轻量 `统计` sheet：
+
+| 记录 | 状态 | 数量 |
+| --- | --- | --- |
+
+如果某个成员没有记录状态，导出中会写为 `未记录`，不会留下空白格。
+
+## LLM 配置说明
+
+Q名册只兼容 OpenAI 格式的接口，暂不支持其他协议。
+
+配置项：
+
+| 字段 | 示例 | 说明 |
+| --- | --- | --- |
+| Base URL | `https://api.openai.com` 或 `https://api.openai.com/v1` | 填到域名或 `/v1` 都可以 |
+| API Key | `sk-...` | 接口密钥 |
+| Model | `gpt-4.1-mini` | 用于解析名单的模型名 |
+
+说明：
+
+- LLM 只用于名单导入解析
+- 关闭 LLM 后，应用仍可使用固定格式导入
+- 当前版本不做云端存储，不做跨设备同步
+
+## 技术栈
+
+| 类型 | 技术 |
+| --- | --- |
+| 应用框架 | Flutter |
+| 状态管理 | provider |
+| 本地存储 | shared_preferences |
+| 表格处理 | excel |
+| 文件选择 | file_selector |
+| 文件分享/保存 | share_plus |
+| SVG 资源 | flutter_svg |
+| HTTP 请求 | http |
+
+## 本地运行
+
+确保已经安装 Flutter 工具链，然后在项目根目录执行：
+
+```bash
+flutter pub get
+flutter run
+```
+
+如果只想检查项目：
+
+```bash
+flutter analyze
+flutter test
+flutter build apk --debug
+```
+
+在某些 Windows 环境中，Flutter 插件可能要求开启开发者模式以支持符号链接。如果没有开启，可以先用已经同步好的依赖执行：
+
+```bash
+flutter analyze --no-pub
+flutter test --no-pub
+flutter build apk --debug --no-pub
+```
+
+## 项目结构
+
+```text
+lib/
+  src/
+    app/          应用入口与主题
+    models/       数据模型
+    services/     导入、LLM、导出等服务
+    state/        全局控制器
+    storage/      本地存储
+    ui/           页面与组件
+assets/
+  svg/            应用图标与插画资源
+test/             Widget 测试与回归测试
+```
+
+## 数据与隐私
+
+- 应用设计为离线小软件
+- 花名册、记录历史和设置保存在本地
+- 不包含云端同步
+- 只有在用户开启 LLM 并主动使用 LLM 解析时，导入文本或表格内容才会发送到用户配置的接口
+
+## 当前边界
+
+当前版本聚焦于可用的 MVP，不包含：
+
+- 云端同步
+- 多人协作
+- 任意导出模板
+- 图表看板
+- 除 `.xlsx` 之外的表格格式
+- 非 OpenAI 格式的 LLM 协议
+
+## 开发状态
+
+Q名册仍处于早期迭代阶段，当前核心流程已经覆盖：
+
+- 首次使用引导
+- LLM 开关与配置
+- 花名册创建与删除
+- 名单文本和 `.xlsx` 导入
+- 点到记录
+- 防漏记录提示
+- 结果筛选与数量统计
+- 历史记录重命名和删除
+- `.xlsx` 导出
+
+后续可以继续完善：
+
+- 更完整的成员编辑管理
+- 默认状态模板
+- 导出样式细节
+- 更细的记录统计视图
+- Android 发布配置
+
+## 仓库
+
+```text
+https://github.com/xmbhjQAQ/Qroster
+```
+
+## 许可
+
+当前仓库尚未声明开源许可证。使用、复制、分发或二次开发前，请先确认项目所有者的授权。
