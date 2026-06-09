@@ -38,16 +38,19 @@ class _ResultScreenState extends State<ResultScreen> {
     final entries = controller.entriesFor(roster.id);
     final visibleEntries = _selectedStatus == null
         ? entries
-        : entries
-              .where(
-                (entry) =>
-                    controller.statusFor(
-                      sessionId: session.id,
-                      entryId: entry.id,
-                    ) ==
-                    _selectedStatus,
-              )
-              .toList();
+        : entries.where((entry) {
+            final status = controller.statusFor(
+              sessionId: session.id,
+              entryId: entry.id,
+            );
+            return _selectedStatus == unrecordedStatusLabel
+                ? status.isEmpty
+                : status == _selectedStatus;
+          }).toList();
+    final unrecordedCount = controller.unrecordedCountFor(
+      rosterId: roster.id,
+      sessionId: session.id,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -73,6 +76,12 @@ class _ResultScreenState extends State<ResultScreen> {
                   label: const Text('全部'),
                   selected: _selectedStatus == null,
                   onSelected: (_) => setState(() => _selectedStatus = null),
+                ),
+                FilterChip(
+                  label: Text('未记录 $unrecordedCount'),
+                  selected: _selectedStatus == unrecordedStatusLabel,
+                  onSelected: (_) =>
+                      setState(() => _selectedStatus = unrecordedStatusLabel),
                 ),
                 for (final status in roster.statusOptions)
                   FilterChip(
@@ -100,6 +109,7 @@ class _ResultScreenState extends State<ResultScreen> {
                   sessionId: session.id,
                   entryId: entry.id,
                 );
+                final isUnrecorded = selected.isEmpty;
                 return SectionCard(
                   child: Row(
                     children: [
@@ -122,25 +132,36 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      DropdownButton<String>(
-                        value: selected.isEmpty ? null : selected,
-                        hint: const Text('状态'),
-                        items: roster.statusOptions
-                            .map(
-                              (status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (status) {
-                          if (status == null) return;
-                          context.read<QrosterController>().setResult(
-                            sessionId: session.id,
-                            entryId: entry.id,
-                            statusLabel: status,
-                          );
-                        },
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (isUnrecorded)
+                            const Chip(
+                              label: Text(unrecordedStatusLabel),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          DropdownButton<String>(
+                            value: isUnrecorded ? null : selected,
+                            hint: const Text('状态'),
+                            items: roster.statusOptions
+                                .map(
+                                  (status) => DropdownMenuItem(
+                                    value: status,
+                                    child: Text(status),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (status) {
+                              if (status == null) return;
+                              context.read<QrosterController>().setResult(
+                                sessionId: session.id,
+                                entryId: entry.id,
+                                statusLabel: status,
+                              );
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -3,7 +3,7 @@
   "name": "06-09-prevent-missed-marking-rename-sessions",
   "title": "Prevent missed marking and rename sessions",
   "description": "Improve Q名册 record flow by surfacing unrecorded entries, preventing accidental skips, allowing session rename, and keeping interactions consistent across marking, result, history, and export.",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

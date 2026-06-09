@@ -67,13 +67,14 @@ class XlsxExportService {
         _text('${indexedEntry.$1 + 1}'),
         _text(entry.displayName),
         _text(entry.note),
-        _text(resultByEntryId[entry.id] ?? ''),
+        _text(_displayStatus(resultByEntryId[entry.id])),
         _text(sessionTime),
       ]);
     }
     _appendSummarySheet(
       workbook: workbook,
       roster: roster,
+      entries: entries,
       sessions: [session],
       resultsBySessionId: {session.id: results},
     );
@@ -112,13 +113,15 @@ class XlsxExportService {
         _text(entry.displayName),
         _text(entry.note),
         ...sessions.map(
-          (session) => _text(resultByKey['${session.id}:${entry.id}'] ?? ''),
+          (session) =>
+              _text(_displayStatus(resultByKey['${session.id}:${entry.id}'])),
         ),
       ]);
     }
     _appendSummarySheet(
       workbook: workbook,
       roster: roster,
+      entries: entries,
       sessions: sessions,
       resultsBySessionId: {
         for (final session in sessions)
@@ -144,6 +147,7 @@ class XlsxExportService {
   void _appendSummarySheet({
     required Excel workbook,
     required Roster roster,
+    required List<RosterEntry> entries,
     required List<RosterSession> sessions,
     required Map<String, List<SessionResult>> resultsBySessionId,
   }) {
@@ -151,13 +155,35 @@ class XlsxExportService {
     sheet.appendRow([_text('记录'), _text('状态'), _text('数量')]);
     for (final session in sessions) {
       final results = resultsBySessionId[session.id] ?? const [];
-      for (final status in roster.statusOptions) {
+      final recordedEntryIds = results
+          .where((result) => result.statusLabel.trim().isNotEmpty)
+          .map((result) => result.entryId)
+          .toSet();
+      final statuses = [
+        ...roster.statusOptions.where(
+          (status) => status != unrecordedStatusLabel,
+        ),
+        unrecordedStatusLabel,
+      ];
+      for (final status in statuses) {
         final count = results
             .where((result) => result.statusLabel == status)
             .length;
-        sheet.appendRow([_text(session.title), _text(status), _text('$count')]);
+        final displayCount = status == unrecordedStatusLabel
+            ? entries.length - recordedEntryIds.length
+            : count;
+        sheet.appendRow([
+          _text(session.title),
+          _text(status),
+          _text('$displayCount'),
+        ]);
       }
     }
+  }
+
+  String _displayStatus(String? status) {
+    final trimmed = status?.trim() ?? '';
+    return trimmed.isEmpty ? unrecordedStatusLabel : trimmed;
   }
 
   String _formatDateTime(DateTime value) {

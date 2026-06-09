@@ -104,16 +104,29 @@ class RosterDetailScreen extends StatelessWidget {
                 if (sessions.isEmpty)
                   const Text('尚未记录。')
                 else
-                  ...sessions.map(
-                    (session) => ListTile(
+                  ...sessions.map((session) {
+                    final recordedCount = controller.recordedCountFor(
+                      rosterId: roster.id,
+                      sessionId: session.id,
+                    );
+                    final unrecordedCount = controller.unrecordedCountFor(
+                      rosterId: roster.id,
+                      sessionId: session.id,
+                    );
+                    return ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(session.title),
                       subtitle: Text(
-                        '${controller.resultsFor(session.id).length} 个状态',
+                        '已记录 $recordedCount · 未记录 $unrecordedCount · ${_formatSessionTime(session.createdAt)}',
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          IconButton(
+                            tooltip: '重命名记录',
+                            icon: const Icon(Icons.edit_rounded),
+                            onPressed: () => _renameSession(context, session),
+                          ),
                           IconButton(
                             tooltip: '删除记录',
                             icon: Icon(
@@ -134,8 +147,8 @@ class RosterDetailScreen extends StatelessWidget {
                           ),
                         ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
               ],
             ),
           ),
@@ -145,14 +158,15 @@ class RosterDetailScreen extends StatelessWidget {
   }
 
   Future<void> _startSession(BuildContext context, Roster roster) async {
-    final recordedAt = await _chooseSessionTime(context);
-    if (recordedAt == null || !context.mounted) {
+    final draft = await _chooseSessionDraft(context);
+    if (draft == null || !context.mounted) {
       return;
     }
     final controller = context.read<QrosterController>();
     final session = await controller.createSession(
       roster,
-      recordedAt: recordedAt,
+      recordedAt: draft.recordedAt,
+      title: draft.title,
     );
     if (!context.mounted) return;
     await Navigator.of(context).push(
@@ -163,91 +177,109 @@ class RosterDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<DateTime?> _chooseSessionTime(BuildContext context) {
+  Future<_SessionDraft?> _chooseSessionDraft(BuildContext context) async {
     var selected = DateTime.now();
-    return showDialog<DateTime>(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('记录时间'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('默认使用当前设备时间。'),
-              const SizedBox(height: 12),
-              Text(
-                '${selected.year}-${_twoDigits(selected.month)}-${_twoDigits(selected.day)} '
-                '${_twoDigits(selected.hour)}:${_twoDigits(selected.minute)}',
-                style: Theme.of(context).textTheme.titleMedium,
+    final titleController = TextEditingController();
+    try {
+      return await showDialog<_SessionDraft>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('记录时间'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('默认使用当前设备时间。'),
+                const SizedBox(height: 12),
+                Text(
+                  _formatSessionTime(selected),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    labelText: '记录名称',
+                    hintText: '默认使用所选时间',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selected,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked == null) return;
+                          setDialogState(() {
+                            selected = DateTime(
+                              picked.year,
+                              picked.month,
+                              picked.day,
+                              selected.hour,
+                              selected.minute,
+                            );
+                          });
+                        },
+                        icon: const Icon(Icons.calendar_month_rounded),
+                        label: const Text('日期'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(selected),
+                          );
+                          if (picked == null) return;
+                          setDialogState(() {
+                            selected = DateTime(
+                              selected.year,
+                              selected.month,
+                              selected.day,
+                              picked.hour,
+                              picked.minute,
+                            );
+                          });
+                        },
+                        icon: const Icon(Icons.schedule_rounded),
+                        label: const Text('时间'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: selected,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked == null) return;
-                        setDialogState(() {
-                          selected = DateTime(
-                            picked.year,
-                            picked.month,
-                            picked.day,
-                            selected.hour,
-                            selected.minute,
-                          );
-                        });
-                      },
-                      icon: const Icon(Icons.calendar_month_rounded),
-                      label: const Text('日期'),
-                    ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(
+                  _SessionDraft(
+                    recordedAt: selected,
+                    title: titleController.text.trim(),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.fromDateTime(selected),
-                        );
-                        if (picked == null) return;
-                        setDialogState(() {
-                          selected = DateTime(
-                            selected.year,
-                            selected.month,
-                            selected.day,
-                            picked.hour,
-                            picked.minute,
-                          );
-                        });
-                      },
-                      icon: const Icon(Icons.schedule_rounded),
-                      label: const Text('时间'),
-                    ),
-                  ),
-                ],
+                ),
+                child: const Text('开始记录'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('取消'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(selected),
-              child: const Text('开始记录'),
-            ),
-          ],
         ),
-      ),
-    );
+      );
+    } finally {
+      titleController.dispose();
+    }
   }
 
   Future<void> _exportHistory(BuildContext context, Roster roster) async {
@@ -296,6 +328,66 @@ class RosterDetailScreen extends StatelessWidget {
       showSnack(context, '已删除记录：${session.title}');
     }
   }
+
+  Future<void> _renameSession(
+    BuildContext context,
+    RosterSession session,
+  ) async {
+    final titleController = TextEditingController(text: session.title);
+    var titleError = '';
+    try {
+      final title = await showDialog<String>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('重命名记录'),
+            content: TextField(
+              controller: titleController,
+              autofocus: true,
+              onChanged: (value) {
+                if (titleError.isNotEmpty && value.trim().isNotEmpty) {
+                  setDialogState(() => titleError = '');
+                }
+              },
+              decoration: InputDecoration(
+                labelText: '记录名称',
+                errorText: titleError.isEmpty ? null : titleError,
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('取消'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final trimmed = titleController.text.trim();
+                  if (trimmed.isEmpty) {
+                    setDialogState(() => titleError = '记录名称不能为空');
+                    return;
+                  }
+                  Navigator.of(context).pop(trimmed);
+                },
+                child: const Text('保存'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (title == null || !context.mounted) {
+        return;
+      }
+      await context.read<QrosterController>().renameSession(
+        sessionId: session.id,
+        title: title,
+      );
+      if (context.mounted) {
+        showSnack(context, '已重命名记录');
+      }
+    } finally {
+      titleController.dispose();
+    }
+  }
 }
 
 extension _FirstOrNull<T> on Iterable<T> {
@@ -303,3 +395,15 @@ extension _FirstOrNull<T> on Iterable<T> {
 }
 
 String _twoDigits(int value) => value.toString().padLeft(2, '0');
+
+String _formatSessionTime(DateTime value) {
+  return '${value.year}-${_twoDigits(value.month)}-${_twoDigits(value.day)} '
+      '${_twoDigits(value.hour)}:${_twoDigits(value.minute)}';
+}
+
+class _SessionDraft {
+  const _SessionDraft({required this.recordedAt, required this.title});
+
+  final DateTime recordedAt;
+  final String title;
+}

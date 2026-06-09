@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../state/qroster_controller.dart';
 import 'result_screen.dart';
+import 'widgets/qroster_widgets.dart';
 
 class MarkingScreen extends StatefulWidget {
   const MarkingScreen({
@@ -36,6 +37,16 @@ class _MarkingScreenState extends State<MarkingScreen> {
       sessionId: widget.sessionId,
       entryId: entry.id,
     );
+    final recordedCount = controller.recordedCountFor(
+      rosterId: widget.rosterId,
+      sessionId: widget.sessionId,
+    );
+    final unrecordedCount = controller.unrecordedCountFor(
+      rosterId: widget.rosterId,
+      sessionId: widget.sessionId,
+    );
+    final hasCurrentStatus = currentStatus.isNotEmpty;
+    final isLastEntry = _index >= entries.length - 1;
 
     return Scaffold(
       appBar: AppBar(
@@ -59,6 +70,24 @@ class _MarkingScreenState extends State<MarkingScreen> {
                 '${_index + 1} / ${entries.length}',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '已记录 $recordedCount · 未记录 $unrecordedCount',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: ActionChip(
+                  avatar: const Icon(Icons.find_in_page_rounded),
+                  label: Text('未记录 $unrecordedCount'),
+                  onPressed: unrecordedCount == 0
+                      ? null
+                      : () => _jumpToNextUnrecorded(context),
+                ),
               ),
               const Spacer(),
               Text(
@@ -113,17 +142,21 @@ class _MarkingScreenState extends State<MarkingScreen> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: FilledButton.icon(
-                      onPressed: _index >= entries.length - 1
-                          ? () => _openResult(context)
-                          : () => setState(() => _index += 1),
-                      icon: Icon(
-                        _index >= entries.length - 1
-                            ? Icons.check_rounded
-                            : Icons.chevron_right_rounded,
-                      ),
-                      label: Text(_index >= entries.length - 1 ? '完成' : '下一个'),
-                    ),
+                    child: hasCurrentStatus
+                        ? FilledButton.icon(
+                            onPressed: () => _moveForward(context),
+                            icon: Icon(
+                              isLastEntry
+                                  ? Icons.check_rounded
+                                  : Icons.chevron_right_rounded,
+                            ),
+                            label: Text(isLastEntry ? '完成' : '下一个'),
+                          )
+                        : FilledButton.tonalIcon(
+                            onPressed: () => _moveForward(context),
+                            icon: const Icon(Icons.warning_amber_rounded),
+                            label: const Text('跳过'),
+                          ),
                   ),
                 ],
               ),
@@ -142,6 +175,104 @@ class _MarkingScreenState extends State<MarkingScreen> {
       entryId: entry.id,
       statusLabel: status,
     );
+  }
+
+  Future<void> _moveForward(BuildContext context) async {
+    final controller = context.read<QrosterController>();
+    final entries = controller.entriesFor(widget.rosterId);
+    final entry = entries[_index];
+    final currentStatus = controller.statusFor(
+      sessionId: widget.sessionId,
+      entryId: entry.id,
+    );
+    if (currentStatus.isEmpty) {
+      final confirmed = await _confirmSkip(context, entry.displayName);
+      if (confirmed != true || !context.mounted) {
+        return;
+      }
+    }
+    if (_index >= entries.length - 1) {
+      await _finish(context);
+      return;
+    }
+    setState(() => _index += 1);
+  }
+
+  Future<bool?> _confirmSkip(BuildContext context, String displayName) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('跳过未记录成员'),
+        content: Text('$displayName 还没有选择状态，确定跳过吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('跳过'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _finish(BuildContext context) async {
+    final controller = context.read<QrosterController>();
+    final unrecordedCount = controller.unrecordedCountFor(
+      rosterId: widget.rosterId,
+      sessionId: widget.sessionId,
+    );
+    if (unrecordedCount == 0) {
+      await _openResult(context);
+      return;
+    }
+    final viewResult = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('还有 $unrecordedCount 人未记录'),
+        content: const Text('可以返回补录，也可以先查看结果。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('返回补录'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('查看结果'),
+          ),
+        ],
+      ),
+    );
+    if (!context.mounted) {
+      return;
+    }
+    if (viewResult == true) {
+      await _openResult(context);
+      return;
+    }
+    final nextIndex = controller.firstUnrecordedIndex(
+      rosterId: widget.rosterId,
+      sessionId: widget.sessionId,
+    );
+    if (nextIndex != null && mounted) {
+      setState(() => _index = nextIndex);
+    }
+  }
+
+  void _jumpToNextUnrecorded(BuildContext context) {
+    final controller = context.read<QrosterController>();
+    final nextIndex = controller.nextUnrecordedIndex(
+      rosterId: widget.rosterId,
+      sessionId: widget.sessionId,
+      startIndex: _index,
+    );
+    if (nextIndex == null) {
+      showSnack(context, '没有未记录成员');
+      return;
+    }
+    setState(() => _index = nextIndex);
   }
 
   Future<void> _openResult(BuildContext context) async {

@@ -12,6 +12,7 @@ import 'package:qroster/src/models/roster_models.dart';
 import 'package:qroster/src/services/xlsx_export_service.dart';
 import 'package:qroster/src/state/qroster_controller.dart';
 import 'package:qroster/src/storage/qroster_store.dart';
+import 'package:qroster/src/ui/marking_screen.dart';
 import 'package:qroster/src/ui/result_screen.dart';
 
 void main() {
@@ -159,6 +160,31 @@ void main() {
     },
   );
 
+  test('renames sessions and supports custom session titles', () async {
+    final controller = QrosterController(store: MemoryQrosterStore());
+    await controller.load();
+    final roster = await controller.createRoster(
+      name: '考勤',
+      statusOptions: defaultStatusOptions,
+      parsedEntries: const [ParsedRosterEntry(displayName: '张三')],
+    );
+    final createdAt = DateTime(2026, 6, 9, 8, 30);
+    final session = await controller.createSession(
+      roster,
+      recordedAt: createdAt,
+      title: '周二早读',
+    );
+
+    expect(session.title, '周二早读');
+
+    await controller.renameSession(sessionId: session.id, title: '第一次训练');
+    final renamed = controller.sessionsFor(roster.id).single;
+
+    expect(renamed.title, '第一次训练');
+    expect(renamed.createdAt, createdAt);
+    expect(renamed.updatedAt.isAfter(createdAt), isTrue);
+  });
+
   test('converts xlsx rows to readable text for LLM parsing', () async {
     final excel = Excel.createExcel();
     final sheet = excel['Sheet1'];
@@ -197,11 +223,6 @@ void main() {
         entryId: entries[0].id,
         statusLabel: '到了',
       );
-      await controller.setResult(
-        sessionId: session.id,
-        entryId: entries[1].id,
-        statusLabel: '没到',
-      );
       final service = XlsxExportService();
 
       final single = Excel.decodeBytes(
@@ -228,6 +249,21 @@ void main() {
         '到了',
         '2026-06-09 08:30',
       ]);
+      expect(_rowText(single['记录'].rows[singleHeader + 2]), [
+        '2',
+        '李四',
+        '',
+        unrecordedStatusLabel,
+        '2026-06-09 08:30',
+      ]);
+      expect(
+        _findRow(single['统计'].rows, [
+          '2026-06-09 08:30',
+          unrecordedStatusLabel,
+          '1',
+        ]),
+        isNotNull,
+      );
 
       final history = Excel.decodeBytes(
         service.buildLongTermHistoryWorkbook(
@@ -251,6 +287,68 @@ void main() {
         '1班',
         '到了',
       ]);
+      expect(_rowText(history['全部记录'].rows[historyHeader + 2]), [
+        '2',
+        '李四',
+        '',
+        unrecordedStatusLabel,
+      ]);
+    },
+  );
+
+  testWidgets(
+    'confirms skipped marking and warns before finishing incomplete',
+    (tester) async {
+      final controller = QrosterController(store: MemoryQrosterStore());
+      await controller.load();
+      final roster = await controller.createRoster(
+        name: '考勤',
+        statusOptions: defaultStatusOptions,
+        parsedEntries: const [
+          ParsedRosterEntry(displayName: '张三'),
+          ParsedRosterEntry(displayName: '李四'),
+        ],
+      );
+      final session = await controller.createSession(roster);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: controller,
+          child: MaterialApp(
+            home: MarkingScreen(rosterId: roster.id, sessionId: session.id),
+          ),
+        ),
+      );
+
+      expect(find.text('已记录 0 · 未记录 2'), findsOneWidget);
+      expect(find.text('张三'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, '跳过'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, '跳过'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('跳过未记录成员'), findsOneWidget);
+      await tester.tap(find.text('取消'));
+      await tester.pumpAndSettle();
+      expect(find.text('张三'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, '跳过'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, '跳过').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('李四'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(FilledButton, '到了'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('完成'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('还有 1 人未记录'), findsOneWidget);
+      await tester.tap(find.text('返回补录'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('张三'), findsOneWidget);
     },
   );
 
@@ -301,6 +399,55 @@ void main() {
 
     expect(find.text('张三'), findsOneWidget);
     expect(find.text('李四'), findsOneWidget);
+  });
+
+  testWidgets('filters unrecorded result rows and allows filling status', (
+    tester,
+  ) async {
+    final controller = QrosterController(store: MemoryQrosterStore());
+    await controller.load();
+    final roster = await controller.createRoster(
+      name: '考勤',
+      statusOptions: defaultStatusOptions,
+      parsedEntries: const [
+        ParsedRosterEntry(displayName: '张三'),
+        ParsedRosterEntry(displayName: '李四'),
+      ],
+    );
+    final session = await controller.createSession(roster);
+    final entries = controller.entriesFor(roster.id);
+    await controller.setResult(
+      sessionId: session.id,
+      entryId: entries[0].id,
+      statusLabel: '到了',
+    );
+
+    await tester.pumpWidget(
+      ChangeNotifierProvider.value(
+        value: controller,
+        child: MaterialApp(
+          home: ResultScreen(rosterId: roster.id, sessionId: session.id),
+        ),
+      ),
+    );
+
+    await tester.tap(find.widgetWithText(FilterChip, '未记录 1'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('数量: 1'), findsOneWidget);
+    expect(find.text('李四'), findsOneWidget);
+    expect(find.text('张三'), findsNothing);
+    expect(find.text(unrecordedStatusLabel), findsOneWidget);
+
+    await tester.tap(find.byType(DropdownButton<String>).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('请假').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      controller.statusFor(sessionId: session.id, entryId: entries[1].id),
+      '请假',
+    );
   });
 }
 

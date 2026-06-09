@@ -69,6 +69,60 @@ class QrosterController extends ChangeNotifier {
         .toList();
   }
 
+  int recordedCountFor({required String rosterId, required String sessionId}) {
+    final entryIds = entriesFor(rosterId).map((entry) => entry.id).toSet();
+    return _data.results
+        .where(
+          (result) =>
+              result.sessionId == sessionId &&
+              entryIds.contains(result.entryId) &&
+              result.statusLabel.trim().isNotEmpty,
+        )
+        .length;
+  }
+
+  int unrecordedCountFor({
+    required String rosterId,
+    required String sessionId,
+  }) {
+    return entriesFor(rosterId).length -
+        recordedCountFor(rosterId: rosterId, sessionId: sessionId);
+  }
+
+  int? firstUnrecordedIndex({
+    required String rosterId,
+    required String sessionId,
+  }) {
+    return nextUnrecordedIndex(
+      rosterId: rosterId,
+      sessionId: sessionId,
+      startIndex: -1,
+    );
+  }
+
+  int? nextUnrecordedIndex({
+    required String rosterId,
+    required String sessionId,
+    required int startIndex,
+  }) {
+    final entries = entriesFor(rosterId);
+    if (entries.isEmpty) {
+      return null;
+    }
+    final normalizedStart = startIndex.clamp(-1, entries.length - 1).toInt();
+    for (var index = normalizedStart + 1; index < entries.length; index += 1) {
+      if (statusFor(sessionId: sessionId, entryId: entries[index].id).isEmpty) {
+        return index;
+      }
+    }
+    for (var index = 0; index <= normalizedStart; index += 1) {
+      if (statusFor(sessionId: sessionId, entryId: entries[index].id).isEmpty) {
+        return index;
+      }
+    }
+    return null;
+  }
+
   String latestRecordLabel(String rosterId) {
     final sessions = sessionsFor(rosterId);
     if (sessions.isEmpty) {
@@ -216,15 +270,40 @@ class QrosterController extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> renameSession({
+    required String sessionId,
+    required String title,
+  }) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) {
+      throw ArgumentError('记录名称不能为空');
+    }
+    _data = _data.copyWith(
+      sessions: _data.sessions
+          .map(
+            (session) => session.id == sessionId
+                ? session.copyWith(title: trimmed, updatedAt: DateTime.now())
+                : session,
+          )
+          .toList(),
+    );
+    await _persist();
+  }
+
   Future<RosterSession> createSession(
     Roster roster, {
     DateTime? recordedAt,
+    String? title,
   }) async {
     final now = recordedAt ?? DateTime.now();
+    final defaultTitle = DateFormat('yyyy-MM-dd HH:mm').format(now);
+    final sessionTitle = title?.trim().isNotEmpty == true
+        ? title!.trim()
+        : defaultTitle;
     final session = RosterSession(
       id: _uuid.v4(),
       rosterId: roster.id,
-      title: DateFormat('yyyy-MM-dd HH:mm').format(now),
+      title: sessionTitle,
       createdAt: now,
       updatedAt: now,
     );

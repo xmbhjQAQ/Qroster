@@ -16,6 +16,7 @@ enum RosterType {
 }
 
 const defaultStatusOptions = ['到了', '没到', '迟到', '请假'];
+const unrecordedStatusLabel = '未记录';
 
 class Roster {
   const Roster({
@@ -138,6 +139,16 @@ class RosterSession {
   final String title;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  RosterSession copyWith({String? title, DateTime? updatedAt}) {
+    return RosterSession(
+      id: id,
+      rosterId: rosterId,
+      title: title ?? this.title,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   Map<String, Object?> toJson() => {
     'id': id,
