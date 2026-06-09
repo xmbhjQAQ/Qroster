@@ -1,9 +1,9 @@
 {
-  "id": "mobile-roster-attendance-app",
-  "name": "mobile-roster-attendance-app",
-  "title": "Mobile roster attendance app",
+  "id": "simplify-roster-model-improve-xlsx-export",
+  "name": "simplify-roster-model-improve-xlsx-export",
+  "title": "Simplify roster model and improve XLSX export",
   "description": "",
-  "status": "in_progress",
+  "status": "planning",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -13,16 +13,13 @@
   "createdAt": "2026-06-09",
   "completedAt": null,
   "branch": null,
-  "base_branch": "main",
+  "base_branch": "master",
   "worktree_path": null,
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [
-    "06-09-qroster-v0-usability-refinements",
-    "06-09-simplify-roster-model-improve-xlsx-export"
-  ],
-  "parent": null,
+  "children": [],
+  "parent": "06-09-mobile-roster-attendance-app",
   "relatedFiles": [],
   "notes": "",
   "meta": {}
