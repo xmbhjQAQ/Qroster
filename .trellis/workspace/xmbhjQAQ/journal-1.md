@@ -38,3 +38,36 @@ Implemented roster swipe actions, preview deletion and validation, long-term ses
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Simplify roster model and improve XLSX export
+
+**Date**: 2026-06-09
+**Task**: Simplify roster model and improve XLSX export
+**Branch**: `master`
+
+### Summary
+
+Removed user-facing temporary/long-term roster choice, made history available to every roster, added history deletion, improved XLSX sheet/column format with summary sheet, switched export handoff to system share/save flow, and verified analyze/test/debug APK.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `def9e81` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
