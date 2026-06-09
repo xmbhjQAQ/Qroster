@@ -104,3 +104,36 @@ Implemented derived 未记录 state across marking/result/export, added skip and
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Add about page
+
+**Date**: 2026-06-09
+**Task**: Add about page
+**Branch**: `master`
+
+### Summary
+
+Added an app-level About page for Q名册, exposed it from the bottom of the home drawer, documented the frontend screen convention, and verified analyze/test/debug APK build.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5bfd374` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -1,0 +1,80 @@
+name: Flutter Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-apk:
+    name: Build and publish release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve version from tag
+        id: version
+        shell: bash
+        run: |
+          VERSION_NAME="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION_NAME" || "$VERSION_NAME" == "$GITHUB_REF_NAME" ]]; then
+            echo "Tag must look like v1.2.3"
+            exit 1
+          fi
+          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "apk_name=qroster-${GITHUB_REF_NAME}-release.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build release APK
+        run: >
+          flutter build apk --release
+          --build-name "${{ steps.version.outputs.version_name }}"
+          --build-number "${{ github.run_number }}"
+
+      - name: Rename APK
+        run: >
+          cp build/app/outputs/flutter-apk/app-release.apk
+          build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qroster-release-apk
+          path: build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release create "${{ github.ref_name }}"
+          "build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}"
+          --title "Qroster ${{ steps.version.outputs.version_name }}"
+          --notes "Q名册 Android release APK，由 GitHub Actions 自动构建。"

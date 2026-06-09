@@ -22,9 +22,17 @@ Questions to answer:
 
 ## Component Structure
 
-<!-- Standard structure of a component file -->
+App-level screens live directly under `lib/src/ui/` with the `_screen.dart`
+suffix. Expose global pages from the home drawer instead of roster-specific
+detail screens when the page does not depend on a roster ID.
 
-(To be filled by the team)
+Example:
+
+```dart
+Navigator.of(context).push(
+  MaterialPageRoute(builder: (_) => const AboutScreen()),
+);
+```
 
 ---
 
@@ -38,9 +46,15 @@ Questions to answer:
 
 ## Styling Patterns
 
-<!-- How styles are applied (CSS modules, styled-components, Tailwind, etc.) -->
+Use the shared widgets in `lib/src/ui/widgets/qroster_widgets.dart` before
+adding new local styling wrappers:
 
-(To be filled by the team)
+- `QAssetIcon` for repo-owned SVG identity and state assets.
+- `SectionCard` for grouped content blocks.
+- `ListTile` rows for settings, support, and app-level actions.
+
+App identity and utility pages should stay compact and task-oriented. Avoid
+marketing-style hero layouts for in-app pages.
 
 ---
 
