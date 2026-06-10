@@ -159,15 +159,21 @@ flutter build apk --debug --no-pub
 | 触发方式 | 行为 |
 | --- | --- |
 | push 到 `master` | 运行 `flutter analyze`、`flutter test`，构建 debug APK 并上传 artifact |
-| 向 `main` 或 `master` 发起 Pull Request | 运行 `flutter analyze`、`flutter test`，构建 debug APK 并上传 artifact |
-| push `v*` tag，例如 `v1.0.1` | 运行检查，构建 release APK，上传 artifact，并创建 GitHub Release |
+| 向 `main` 发起 Pull Request | 运行 `flutter analyze`、`flutter test`，构建 debug APK 并上传 artifact |
+| 合并 Pull Request 到 `main` | 根据 PR 的 release label 更新版本号，构建 release APK，创建 tag，并发布 GitHub Release |
 
 版本策略：
 
-- 合并到 `main` 或 `master` 不自动修改 `pubspec.yaml` 版本号
-- 发布版本由 tag 控制，例如 `v1.0.1`
-- tag 构建时使用 tag 去掉 `v` 后的内容作为 `build-name`
-- tag 构建时使用 GitHub Actions run number 作为 `build-number`
+- `master` 是开发分支，push 后只产出 debug APK，不创建 Release
+- `main` 是发布分支，PR 合并到 `main` 后自动发版
+- 合并到 `main` 的 PR 必须且只能带一个 release label：
+  - `release:patch`：例如 `1.2.3` 发布为 `1.2.4`
+  - `release:minor`：例如 `1.2.3` 发布为 `1.3.0`
+  - `release:major`：例如 `1.2.3` 发布为 `2.0.0`
+- 自动发版会更新 `pubspec.yaml` 的 `version: X.Y.Z+B`
+- `build-name` 使用新的 `X.Y.Z`
+- `build-number` 使用 `pubspec.yaml` 中 `+B` 的递增值
+- 自动发版会创建对应的 `vX.Y.Z` tag，并把 release APK 上传到 GitHub Release
 
 正式上架前，需要把 Android release signing 从当前临时配置切换到正式 keystore，并通过 GitHub Secrets 管理签名信息。
 
