@@ -2,20 +2,129 @@ name: Flutter Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 permissions:
   contents: write
+  pull-requests: read
+
+concurrency:
+  group: main-release
+  cancel-in-progress: false
 
 jobs:
   release-apk:
     name: Build and publish release APK
+    if: ${{ !contains(github.event.head_commit.message, '[skip release]') }}
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Prepare release branch
+        run: git checkout -B main "${GITHUB_SHA}"
+
+      - name: Resolve release label
+        id: release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const supportedLabels = ['release:patch', 'release:minor', 'release:major'];
+            const { owner, repo } = context.repo;
+            const result = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: context.sha,
+            });
+
+            const candidates = result.data
+              .filter((pr) => pr.merged_at && pr.base.ref === 'main' && pr.merge_commit_sha === context.sha)
+              .sort((a, b) => new Date(b.merged_at) - new Date(a.merged_at) || b.number - a.number);
+            if (candidates.length === 0) {
+              throw new Error(`No merged pull request targeting main was found for commit ${context.sha}. Add a supported release label to the PR and merge through a pull request.`);
+            }
+
+            const pr = candidates[0];
+            const { data: prDetails } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number: pr.number,
+            });
+            const labelNames = prDetails.labels.map((label) => label.name);
+            const releaseLabels = labelNames.filter((name) => supportedLabels.includes(name));
+            if (releaseLabels.length !== 1) {
+              throw new Error(`PR #${pr.number} must have exactly one release label: ${supportedLabels.join(', ')}. Found: ${releaseLabels.length ? releaseLabels.join(', ') : 'none'}.`);
+            }
+
+            core.setOutput('pr_number', String(pr.number));
+            core.setOutput('label', releaseLabels[0]);
+            core.setOutput('bump', releaseLabels[0].replace('release:', ''));
+
+      - name: Compute next version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version_lines="$(grep -n -E '^version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+([[:space:]]*#.*)?$' pubspec.yaml || true)"
+          version_line_count="$(printf '%s\n' "$version_lines" | sed '/^$/d' | wc -l)"
+
+          if [[ "$version_line_count" -ne 1 ]]; then
+            echo "Error: expected exactly one pubspec.yaml version line like 'version: 1.2.3+4'." >&2
+            echo "Found matching version lines: ${version_line_count}" >&2
+            echo "All version lines in pubspec.yaml:" >&2
+            grep -n '^version:' pubspec.yaml >&2 || echo "  (no version lines found)" >&2
+            exit 1
+          fi
+
+          version_line="${version_lines#*:}"
+          current_version="$(sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+\+[0-9]+).*$/\1/' <<< "$version_line")"
+          semver="${current_version%+*}"
+          build_number="${current_version#*+}"
+
+          IFS='.' read -r major minor patch <<< "$semver"
+
+          case "${{ steps.release.outputs.bump }}" in
+            patch)
+              patch=$((patch + 1))
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            *)
+              echo "Unsupported release bump: ${{ steps.release.outputs.bump }}"
+              exit 1
+              ;;
+          esac
+
+          next_version="${major}.${minor}.${patch}"
+          next_build=$((build_number + 1))
+          tag_name="v${next_version}"
+          apk_name="qroster-${tag_name}-release.apk"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${tag_name}" >/dev/null 2>&1; then
+            echo "Tag ${tag_name} already exists."
+            exit 1
+          fi
+
+          sed -i "s/^version: .*/version: ${next_version}+${next_build}/" pubspec.yaml
+
+          echo "current_version=${current_version}" >> "$GITHUB_OUTPUT"
+          echo "next_version=${next_version}" >> "$GITHUB_OUTPUT"
+          echo "next_build=${next_build}" >> "$GITHUB_OUTPUT"
+          echo "tag_name=${tag_name}" >> "$GITHUB_OUTPUT"
+          echo "apk_name=${apk_name}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -29,18 +138,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Resolve version from tag
-        id: version
-        shell: bash
-        run: |
-          VERSION_NAME="${GITHUB_REF_NAME#v}"
-          if [[ -z "$VERSION_NAME" || "$VERSION_NAME" == "$GITHUB_REF_NAME" ]]; then
-            echo "Tag must look like v1.2.3"
-            exit 1
-          fi
-          echo "version_name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
-          echo "apk_name=qroster-${GITHUB_REF_NAME}-release.apk" >> "$GITHUB_OUTPUT"
-
       - name: Flutter version
         run: flutter --version
 
@@ -53,16 +150,43 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Commit release version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore(release): ${{ steps.version.outputs.tag_name }} [skip release]"
+
       - name: Build release APK
         run: >
           flutter build apk --release
-          --build-name "${{ steps.version.outputs.version_name }}"
-          --build-number "${{ github.run_number }}"
+          --build-name "${{ steps.version.outputs.next_version }}"
+          --build-number "${{ steps.version.outputs.next_build }}"
 
       - name: Rename APK
         run: >
           cp build/app/outputs/flutter-apk/app-release.apk
           build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}
+
+      - name: Push release commit and tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "ERROR: origin/main advanced while this release job was running." >&2
+            echo "This release commit cannot be pushed as a fast-forward." >&2
+            echo "Re-run the release workflow after main is up to date." >&2
+            exit 1
+          fi
+
+          git tag "${{ steps.version.outputs.tag_name }}"
+          git push origin HEAD:main
+          git push origin "${{ steps.version.outputs.tag_name }}"
 
       - name: Upload release APK artifact
         uses: actions/upload-artifact@v4
@@ -74,7 +198,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
-          gh release create "${{ github.ref_name }}"
+          gh release create "${{ steps.version.outputs.tag_name }}"
           "build/app/outputs/flutter-apk/${{ steps.version.outputs.apk_name }}"
-          --title "Qroster ${{ steps.version.outputs.version_name }}"
-          --notes "Q名册 Android release APK，由 GitHub Actions 自动构建。"
+          --title "Qroster ${{ steps.version.outputs.next_version }}"
+          --notes "Q名册 Android release APK，由 PR #${{ steps.release.outputs.pr_number }} 的 ${{ steps.release.outputs.label }} 标签触发自动构建。"

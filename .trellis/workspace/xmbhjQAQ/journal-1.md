@@ -137,3 +137,43 @@ Added an app-level About page for Q名册, exposed it from the bottom of the hom
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Automate main release workflow
+
+**Date**: 2026-06-10
+**Task**: Automate main release workflow
+**Branch**: `master`
+
+### Summary
+
+Configured master debug CI and main-merge release automation with PR release labels, version bumping, tagging, APK publishing, and README documentation.
+
+### Main Changes
+
+- Configured `.github/workflows/flutter-ci.yml` to keep `master` as the debug CI branch and validate release labels on PRs into `main`.
+- Reworked `.github/workflows/flutter-release.yml` to trigger from `main` merges, resolve the merged PR release label, bump `pubspec.yaml`, create a release tag, build the APK, and publish a GitHub Release.
+- Added repository labels for `release:patch`, `release:minor`, and `release:major` to control semantic version bumps.
+- Updated `README.md` with the new branch and release strategy.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f30bff9` | (see git log) |
+
+### Testing
+
+- [OK] `git diff --check`
+- [OK] GitHub Actions YAML parsed successfully
+- [OK] `flutter analyze --no-pub`
+- [OK] `flutter test --no-pub`
+- [OK] `flutter build apk --debug --no-pub`
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
