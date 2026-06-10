@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
-- **Last Active**: 2026-06-09
+- **Total Sessions**: 5
+- **Last Active**: 2026-06-10
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~139 | Active |
+| `journal-1.md` | ~172 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-06-10 | Automate main release workflow | `f30bff9` | `master` |
 | 4 | 2026-06-09 | Add about page | `5bfd374` | `master` |
 | 3 | 2026-06-09 | Prevent missed marking and rename sessions | `d16eb88` | `master` |
 | 2 | 2026-06-09 | Simplify roster model and improve XLSX export | `def9e81` | `master` |

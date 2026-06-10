@@ -137,3 +137,36 @@ Added an app-level About page for Q名册, exposed it from the bottom of the hom
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Automate main release workflow
+
+**Date**: 2026-06-10
+**Task**: Automate main release workflow
+**Branch**: `master`
+
+### Summary
+
+Configured master debug CI and main-merge release automation with PR release labels, version bumping, tagging, APK publishing, and README documentation.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f30bff9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
