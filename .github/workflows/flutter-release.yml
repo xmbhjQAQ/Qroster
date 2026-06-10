@@ -42,7 +42,9 @@ jobs:
               commit_sha: context.sha,
             });
 
-            const candidates = result.data.filter((pr) => pr.merged_at && pr.base.ref === 'main');
+            const candidates = result.data
+              .filter((pr) => pr.merged_at && pr.base.ref === 'main' && pr.merge_commit_sha === context.sha)
+              .sort((a, b) => new Date(b.merged_at) - new Date(a.merged_at) || b.number - a.number);
             if (candidates.length === 0) {
               throw new Error(`No merged pull request targeting main was found for commit ${context.sha}. Add a supported release label to the PR and merge through a pull request.`);
             }
@@ -69,8 +71,19 @@ jobs:
         run: |
           set -euo pipefail
 
-          version_line="$(grep -E '^version: [0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$' pubspec.yaml)"
-          current_version="${version_line#version: }"
+          version_lines="$(grep -n -E '^version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+([[:space:]]*#.*)?$' pubspec.yaml || true)"
+          version_line_count="$(printf '%s\n' "$version_lines" | sed '/^$/d' | wc -l)"
+
+          if [[ "$version_line_count" -ne 1 ]]; then
+            echo "Error: expected exactly one pubspec.yaml version line like 'version: 1.2.3+4'." >&2
+            echo "Found matching version lines: ${version_line_count}" >&2
+            echo "All version lines in pubspec.yaml:" >&2
+            grep -n '^version:' pubspec.yaml >&2 || echo "  (no version lines found)" >&2
+            exit 1
+          fi
+
+          version_line="${version_lines#*:}"
+          current_version="$(sed -E 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+\+[0-9]+).*$/\1/' <<< "$version_line")"
           semver="${current_version%+*}"
           build_number="${current_version#*+}"
 
@@ -162,6 +175,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          git fetch origin main
+          if ! git merge-base --is-ancestor origin/main HEAD; then
+            echo "ERROR: origin/main advanced while this release job was running." >&2
+            echo "This release commit cannot be pushed as a fast-forward." >&2
+            echo "Re-run the release workflow after main is up to date." >&2
+            exit 1
+          fi
 
           git tag "${{ steps.version.outputs.tag_name }}"
           git push origin HEAD:main
